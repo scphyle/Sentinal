@@ -1,3 +1,6 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Sentinal.Application;
 using Sentinal.Infrastructure;
@@ -12,6 +15,25 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddApplication()
                 .AddInfrastructure(builder.Configuration);
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        ValidateLifetime = true
+    };
+});
+
 
 var app = builder.Build();
 
@@ -24,6 +46,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -18,12 +18,13 @@
 
 ### Application Layer - CQRS Commands & Queries
 **User Commands & Queries**:
-- [x] RegisterUserCommand & handler (basic implementation)
+- [x] RegisterUserCommand & handler with validation, password hashing, and duplicate checks
+- [x] LoginUserCommand & handler with email/username lookup and Argon2 password verification
+- [x] JWT Token Generation in LoginUserCommand with claims (UserId, Username, Email)
 - [x] UserRepository with full CRUD and recovery support
-- [ ] LoginUserQuery & handler
-- [ ] UpdateUserCommand & handler
-- [ ] DeleteUserCommand & handler (soft delete)
-- [ ] Create user-related DTOs (LoginResponse, UserDto)
+- [x] Create user-related DTOs (LoginUserDto with token, RegisterUserDto)
+- [ ] UpdateUserCommand & handler (scaffolded, pending implementation)
+- [ ] DeleteUserCommand & handler (soft delete, scaffolded, pending implementation)
 
 **Folder Commands & Queries**:
 - [ ] CreateFolderCommand & handler
@@ -51,18 +52,37 @@
 - [x] Implement Argon2PasswordService (IPasswordHasher)
 - [x] Implement LocalFileStorageService, S3FileStorageService, AzureBlobFileStorageService (IFileStorageService)
 - [x] Configure FileStorageOptions and StorageType enum
+- [x] Implement User repository (IUserRepository) with soft-delete awareness and recovery flows
+- [x] **Implement JwtTokenService (IJwtTokenService)**
+  - [x] Token generation with claims (UserId, Username, Email)
+  - [x] Token validation and claim extraction
+  - [x] Configurable expiration (120 minutes) and secret key
 - [ ] **Complete Folder repository implementation** (GetFolders, update/delete methods)
 - [ ] **Complete File repository implementation** (GetFiles, update/delete methods)
-- [x] Implement User repository (IUserRepository) with soft-delete awareness and recovery flows
 - [ ] Create and apply database migrations
 - [ ] Set up database initialization and seeding
 - [ ] Configure pgvector extension (preparation for semantic search)
 
-### Presentation Layer - API Endpoints
-**Controllers** (Stubbed, awaiting CQRS integration):
-- [x] FolderController - Stubbed with HTTP routes
-- [x] FileController - Stubbed with HTTP routes
-- [x] UserController - Scaffolded with endpoints (register, login, logout, get, update, delete)
+### Presentation Layer - API Endpoints & Authentication
+**Authentication** (Phase 1 - Complete):
+- [x] JwtTokenService implemented with token generation and validation
+- [x] LoginUserCommand returns JWT token in LoginUserDto
+- [x] JWT bearer token authentication middleware configured in Program.cs
+- [x] TokenValidationParameters (key, issuer, audience, lifetime) properly configured
+- [ ] Add [Authorize] attributes to protected endpoints (Folder/File controllers)
+- [ ] Extract user context (UserId) from JWT claims in Folder/File handlers
+
+**Controllers**:
+- [x] UserController - Fully wired with Register & Login endpoints dispatching CQRS commands
+  - [x] POST /api/users/register - Dispatches RegisterUserCommand, returns RegisterUserDto
+  - [x] POST /api/users/login - Dispatches LoginUserCommand, returns LoginUserDto with JWT token
+  - [ ] POST /api/users/update-password - Scaffolded, pending UpdateUserCommand
+  - [ ] POST /api/users/update-email - Scaffolded, pending UpdateUserCommand
+  - [ ] POST /api/users/update-username - Scaffolded, pending UpdateUserCommand
+  - [ ] POST /api/users/confirm-email - Scaffolded, pending implementation
+  - [ ] DELETE /api/users/{id} - Scaffolded, pending DeleteUserCommand
+- [ ] FolderController - Stubbed with HTTP routes (awaiting JWT auth & CQRS integration)
+- [ ] FileController - Stubbed with HTTP routes (awaiting JWT auth & CQRS integration)
 
 **FoldersController Endpoints**:
 - [ ] POST /api/folders - Create folder (wire to CreateFolderCommand)
@@ -80,11 +100,6 @@
 - [ ] GET /api/files/{id}/download - Download file (wire to DownloadFileQuery)
 - [ ] GET /api/files?folderId={id} - Get files by folder (wire to GetFilesByFolderQuery)
 - [ ] GET /api/files - Get all files (wire to GetAllFilesQuery)
-
-**AuthController Endpoints** (NEW):
-- [ ] POST /api/auth/register - Register user (wire to RegisterUserCommand)
-- [ ] POST /api/auth/login - Login user (wire to LoginUserQuery)
-- [ ] POST /api/auth/logout - Logout user
 
 ### Testing & Validation
 - [x] XUnit test project (Sentinal.Tests) created
@@ -162,5 +177,5 @@
 ---
 
 **Last Updated**: 2026-06-11
-**Current Phase**: Phase 1 - Groundwork & Framework (70% complete)
-**Status**: Domain, Infrastructure, and DI complete. Next: CQRS handlers, repository implementations, and controller wiring.
+**Current Phase**: Phase 1 - Groundwork & Framework (85% complete)
+**Status**: Domain, Infrastructure, DI, User CQRS, and JWT authentication fully complete. Register & Login endpoints with token generation wired. Next: JWT middleware in Program.cs, then Folder and File CQRS commands/queries, repository implementations, and controller wiring.

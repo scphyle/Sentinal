@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPasswordHasher, Argon2PasswordService>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
 
         services.AddScoped<IFileStorageService>(provider =>
         {

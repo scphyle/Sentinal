@@ -119,11 +119,12 @@ Sentinal/
 - **Handlers**: Implement command/query logic using MediatR
 - All commands and queries flow through MediatR pipeline for cross-cutting concerns
 
-### Current Phase 1 Scope
+### Current Phase 1 Scope (80% Complete)
 
 **Controllers** (Presentation Layer):
-- `FoldersController` - Manage folder hierarchies (CRUD operations)
-- `FilesController` - Manage file operations (CRUD operations)
+- `UserController` - Authentication and user management (Register & Login fully wired)
+- `FoldersController` - Manage folder hierarchies (CRUD operations, awaiting CQRS wiring)
+- `FilesController` - Manage file operations (CRUD operations, awaiting CQRS wiring)
 
 **Domain Models** (Entities):
 - **UserEntity**: User authentication and file/folder ownership
@@ -169,6 +170,18 @@ Sentinal/
 - 7-day retention period before permanent deletion (configured in `FileStorageOptions.DeletedFileRetentionDays`)
 - Soft-delete cleanup service planned (runs daily, removes items > 7 days old)
 - Prevents accidental data loss and maintains audit trail
+
+**JWT Authentication** (Phase 1 - Complete):
+- ✅ Token generation in `LoginUserCommand` after successful password verification via `JwtTokenService`
+- ✅ Claims include: userId (custom), ClaimTypes.Name, ClaimTypes.Email
+- ✅ `JwtTokenService` provides `GenerateToken()` and `ValidateToken()` methods
+- ✅ Algorithm: HmacSha256 with SymmetricSecurityKey from `Jwt:Key` in appsettings.json
+- ✅ Issuer and Audience validation configured
+- ✅ Token expiration: 120 minutes
+- ✅ Bearer token middleware configured in `Program.cs` with `AddAuthentication()` and `AddJwtBearer()`
+- ✅ TokenValidationParameters set up in Program.cs for ASP.NET Core validation pipeline
+- ⏳ Next: Add [Authorize] attributes to Folder/File controllers
+- ⏳ Next: Extract UserId from JWT claims in Folder/File handlers for authorization
 
 **Future Authentication**:
 - 2FA support flagged in UserEntity (`TwoFactorEnabled`)
@@ -324,6 +337,56 @@ The project uses a two-repository strategy for version control:
 3. For registration: `var hash = _passwordHasher.HashPassword(plainPassword);`
 4. For login: `var isValid = _passwordHasher.VerifyPassword(plainPassword, storedHash);`
 
+### User Authentication Implementation (Reference)
+The User CQRS implementation (`RegisterUserCommand` and `LoginUserCommand`) provides a reference pattern for wiring commands in controllers:
+
+**1. Define Request DTOs** (`Api/Models/Requests/`):
+```csharp
+public class RegisterUserRequest
+{
+    [Required]
+    [StringLength(255, MinimumLength = 3)]
+    public string Username { get; set; } = null!;
+    // ... other properties with validation attributes
+}
+```
+
+**2. Create CQRS Command** (`Application/Users/{Feature}/`):
+```csharp
+public record RegisterUserCommand(string Username, string Email, string Password) 
+    : IRequest<Result<RegisterUserDto>>;
+```
+
+**3. Implement Handler with Logging**:
+```csharp
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<RegisterUserDto>>
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly ILogger<RegisterUserCommandHandler> _logger;
+
+    public async Task<Result<RegisterUserDto>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
+    {
+        // Validation, business logic, error handling
+        _logger.LogError(e, "Error creating user with username {Username}", command.Username);
+        return Result.Ok(new RegisterUserDto(...));
+    }
+}
+```
+
+**4. Wire in Controller**:
+```csharp
+[HttpPost("register")]
+public async Task<ActionResult<RegisterUserDto>> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
+{
+    var command = new RegisterUserCommand(request.Username, request.Email, request.Password);
+    var commandResult = await _mediator.Send(command, ct);
+    if(commandResult.IsSuccess)
+        return Ok(commandResult.Value);
+    return BadRequest(commandResult.Errors);
+}
+```
+
 ### Running Tests
 ```bash
 # Run all tests
@@ -368,4 +431,9 @@ dotnet test /p:CollectCoverage=true
 - The GUID-based file path structure prevents naming conflicts and maintains security
 - Entity relationships are configured with `OnDelete(DeleteBehavior.Restrict)` to prevent orphaning
 - MediatR registration auto-discovers handlers in the Application assembly
-- Future: When implementing 2FA, use the `TwoFactorEnabled` flag and `CreatedAt`/`UpdatedAt` for audit trails
+- All command/query handlers should inject `ILogger<T>` for audit trails and debugging (see User CQRS pattern)
+- Controller endpoints map request DTOs → commands/queries → handlers → response DTOs (see UserController for reference)
+- JWT is implemented via `JwtTokenService`—use `ValidateToken()` to extract `ClaimsPrincipal` in middleware
+- All Folder/File endpoints must have [Authorize] attribute and extract UserId from JWT claims in handlers
+- When implementing 2FA, use the `TwoFactorEnabled` flag and `CreatedAt`/`UpdatedAt` for audit trails
+- Update/Delete user endpoints (scaffolded as empty) should follow the same CQRS pattern as Register/Login

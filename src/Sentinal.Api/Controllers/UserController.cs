@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sentinal.Api.Models.Requests;
 using Sentinal.Application.Users.Login;
@@ -40,7 +41,7 @@ public class UserController : ControllerBase
         }
         return BadRequest(commandResult.Errors);
     }
-
+    [Authorize]
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -48,6 +49,7 @@ public class UserController : ControllerBase
         return NotFound("Not implemented Logout");
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUser(Guid id)
     {
@@ -55,29 +57,35 @@ public class UserController : ControllerBase
         return NotFound("Not implemented GetUser");
     }
 
+    [Authorize]
     [HttpPost("update-password")]
     public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdatePassword");
     }
+
+    [Authorize]
     [HttpPost("update-email")]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateUserEmailRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdateEmail");
     }
 
+    [Authorize]
     [HttpPost("update-username")]
     public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdateUsername");
     }
 
+    [Authorize]
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail([FromBody] UpdateUserEmailConfirmedRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented ConfirmEmail");
     }
 
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {

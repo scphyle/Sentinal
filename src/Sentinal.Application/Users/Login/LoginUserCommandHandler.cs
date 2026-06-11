@@ -12,12 +12,14 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<LoginUserCommandHandler> _logger;
+    private readonly IJwtTokenService _jwtTokenService;
 
-    public LoginUserCommandHandler(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<LoginUserCommandHandler> logger)
+    public LoginUserCommandHandler(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<LoginUserCommandHandler> logger, IJwtTokenService jwtTokenService)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _jwtTokenService = jwtTokenService;
     }
 
     public async Task<Result<LoginUserDto>> Handle(LoginUserCommand loginRequest, CancellationToken cancellationToken)
@@ -51,7 +53,8 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         if(_passwordHasher.VerifyPassword(loginRequest.Password, user.PasswordHash))
         {
             _logger.LogInformation("User logged in successfully: {UserId}", user.Id);
-            return Result.Ok(new LoginUserDto(user.Username, user.Email, user.Id));
+            var token = _jwtTokenService.GenerateToken(user);
+            return Result.Ok(new LoginUserDto(user.Username, user.Email, user.Id, token));
         }
 
         _logger.LogWarning("Failed login attempt for user: {UserId}", user.Id);
