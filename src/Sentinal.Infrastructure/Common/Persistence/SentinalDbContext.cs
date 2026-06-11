@@ -15,10 +15,6 @@ public class SentinalDbContext : DbContext
     public SentinalDbContext(DbContextOptions<SentinalDbContext> options) : base(options)
     {
     }
-    public async Task<int> SaveChangesAsync()
-    {
-        return await base.SaveChangesAsync();
-    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());

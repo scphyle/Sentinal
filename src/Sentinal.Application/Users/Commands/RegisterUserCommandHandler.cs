@@ -1,10 +1,12 @@
+using FluentResults;
 using MediatR;
 using Sentinal.Application.Common.Interfaces;
+using Sentinal.Domain.Users;
 using Sentinal.Infrastructure.Common.Security;
 
 namespace Sentinal.Application.Users.Commands;
 
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Guid>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<UserEntity>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -15,10 +17,18 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, G
         _passwordHasher = passwordHasher;
     }
 
-    public async Task<Guid> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
+    public async Task<Result<UserEntity>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
     {
         var hashedPassword = _passwordHasher.HashPassword(command.Password);
+        try
+        {
+            return await _userRepository.CreateUserAsync(command.Username, command.Email, hashedPassword);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Result.Fail(e.Message);
+        }
 
-        return await _userRepository.CreateUser(command.Username, command.Email, hashedPassword);
     }
 }

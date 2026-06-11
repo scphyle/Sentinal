@@ -1,6 +1,7 @@
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Domain.Folders;
 using Sentinal.Infrastructure.Common.Persistence;
+using FluentResults;
 
 namespace Sentinal.Infrastructure.Folders.Persistence;
 
@@ -18,9 +19,8 @@ public class FolderRepository : IFolderRepository
         throw new NotImplementedException();
     }
 
-    public async Task<FolderEntity> GetFolder(Guid id)
+    public async Task<FolderEntity?> GetFolder(Guid id)
     {
-        //TODO: Convert to Fluent
         return await _context.Folders.FindAsync(id) ?? throw new Exception();
     }
 
