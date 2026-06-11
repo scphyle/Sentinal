@@ -16,10 +16,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="FIles\Commands\" />
-      <Folder Include="FIles\Queries\" />
-      <Folder Include="Folders\Commands\" />
-      <Folder Include="Folders\Queries\" />
+      <Folder Include="FIles\" />
+      <Folder Include="Folders\" />
     </ItemGroup>
 
 </Project>

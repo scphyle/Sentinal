@@ -2,6 +2,6 @@ using FluentResults;
 using MediatR;
 using Sentinal.Domain.Users;
 
-namespace Sentinal.Application.Users.Commands;
+namespace Sentinal.Application.Users.Register;
 
-public record RegisterUserCommand(string Username, string Email, string Password): IRequest<Result<UserEntity>>;
+public record RegisterUserCommand(string Username, string Email, string Password): IRequest<Result<RegisterUserDto>>;

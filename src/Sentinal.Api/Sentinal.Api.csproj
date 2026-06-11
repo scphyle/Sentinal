@@ -18,4 +18,8 @@
       <ProjectReference Include="..\Sentinal.Infrastructure\Sentinal.Infrastructure.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Models\Users\Responses\" />
+    </ItemGroup>
+
 </Project>
