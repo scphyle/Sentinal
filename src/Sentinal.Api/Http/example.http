@@ -1,0 +1,15 @@
+### Local Development Variables
+@baseUrl = http://localhost:5230
+@contentType = application/json
+
+### Health Check - Get Weather Forecast
+GET {{baseUrl}}/weatherforecast
+Accept: {{contentType}}
+
+### Example POST - Add your tests below
+# POST {{baseUrl}}/api/folders
+# Content-Type: {{contentType}}
+#
+# {
+#   "name": "My Folder"
+# }

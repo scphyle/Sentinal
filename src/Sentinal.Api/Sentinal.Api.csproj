@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UserSecretsId>5a00c072-83f4-4fa3-82ee-d932ac847edb</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="MediatR" Version="14.1.0" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8"/>
+        <PackageReference Include="Scalar.AspNetCore" Version="1.2.48"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Sentinal.Application\Sentinal.Application.csproj" />
+      <ProjectReference Include="..\Sentinal.Infrastructure\Sentinal.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>
