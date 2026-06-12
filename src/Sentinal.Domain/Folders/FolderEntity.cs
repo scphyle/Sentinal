@@ -11,11 +11,11 @@ public class FolderEntity
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
-    public bool? MarkedForDeletion { get; set; }
+    public bool MarkedForDeletion { get; set; }
 
     // Navigation properties
     public FolderEntity? Parent { get; set; }
-    public ICollection<FolderEntity> Children { get; set; } = new List<FolderEntity>();
-    public ICollection<FileEntity> Files { get; set; } = new List<FileEntity>();
+    public List<FolderEntity> Children { get; set; } = [];
+    public List<FileEntity> Files { get; set; } = [];
     // public User? User { get; set; } // Future
 }

@@ -12,7 +12,7 @@ public class FileEntity
     public Guid UserId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
-    public bool? MarkedForDeletion { get; set; }
+    public bool MarkedForDeletion { get; set; }
     public DateTime? DeletedAt { get; set; }
 
     // Navigation properties

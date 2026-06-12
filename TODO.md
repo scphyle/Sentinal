@@ -20,20 +20,23 @@
 **User Commands & Queries**:
 - [x] RegisterUserCommand & handler with validation, password hashing, and duplicate checks
 - [x] LoginUserCommand & handler with email/username lookup and Argon2 password verification
-- [x] JWT Token Generation in LoginUserCommand with claims (UserId, Username, Email)
+- [x] JWT Token Generation in both LoginUserCommand and RegisterUserCommand with claims (UserId, Username, Email)
 - [x] UserRepository with full CRUD and recovery support
-- [x] Create user-related DTOs (LoginUserDto with token, RegisterUserDto)
+- [x] Create unified user DTO (UserAuthDto) consolidating registration and login responses
 - [ ] UpdateUserCommand & handler (scaffolded, pending implementation)
 - [ ] DeleteUserCommand & handler (soft delete, scaffolded, pending implementation)
 
 **Folder Commands & Queries**:
-- [ ] CreateFolderCommand & handler
-- [ ] UpdateFolderCommand & handler
-- [ ] DeleteFolderCommand & handler (soft delete)
-- [ ] GetFolderByIdQuery & handler
-- [ ] GetFoldersByParentQuery & handler
-- [ ] GetAllFoldersQuery & handler
-- [ ] Create folder-related DTOs (CreateFolderDto, FolderDto, UpdateFolderDto)
+- [x] CreateFolderCommand & handler with validation and duplicate name check
+- [x] UpdateFolderNameCommand & handler with name validation
+- [x] DeleteFolderCommand & handler (soft delete) with ownership verification
+- [x] GetFolderQuery & handler with ownership check and full folder data
+- [x] GetFolderSubFoldersQuery & handler for hierarchical navigation
+- [x] GetAllFoldersQuery & handler retrieving all user folders
+- [x] SearchFolderByNameQuery & handler with LIKE search support
+- [x] MoveFolderCommand & handler with duplicate validation
+- [x] GetFoldersInRecycleBinQuery & handler for soft-deleted folders
+- [x] Create folder-related DTOs (CreateFolderDto, FolderDto, UpdateFolderDto)
 
 **File Commands & Queries**:
 - [ ] CreateFileCommand & handler (upload file)
@@ -57,7 +60,7 @@
   - [x] Token generation with claims (UserId, Username, Email)
   - [x] Token validation and claim extraction
   - [x] Configurable expiration (120 minutes) and secret key
-- [ ] **Complete Folder repository implementation** (GetFolders, update/delete methods)
+- [x] **Complete Folder repository implementation** (all CRUD, hierarchy, search, and soft-delete operations with validation)
 - [ ] **Complete File repository implementation** (GetFiles, update/delete methods)
 - [ ] Create and apply database migrations
 - [ ] Set up database initialization and seeding
@@ -177,5 +180,5 @@
 ---
 
 **Last Updated**: 2026-06-11
-**Current Phase**: Phase 1 - Groundwork & Framework (85% complete)
-**Status**: Domain, Infrastructure, DI, User CQRS, and JWT authentication fully complete. Register & Login endpoints with token generation wired. Next: JWT middleware in Program.cs, then Folder and File CQRS commands/queries, repository implementations, and controller wiring.
+**Current Phase**: Phase 1 - Groundwork & Framework (90% complete)
+**Status**: Domain, Infrastructure, DI, User CQRS, JWT authentication fully complete. User and Folder CQRS commands/queries/handlers complete with unified UserAuthDto and full FolderRepository implementation. Registration now returns auth token for immediate login. Next: Wire FolderController endpoints to handlers, File CQRS implementation, and controller authorization integration.

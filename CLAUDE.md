@@ -119,11 +119,11 @@ Sentinal/
 - **Handlers**: Implement command/query logic using MediatR
 - All commands and queries flow through MediatR pipeline for cross-cutting concerns
 
-### Current Phase 1 Scope (80% Complete)
+### Current Phase 1 Scope (90% Complete)
 
 **Controllers** (Presentation Layer):
-- `UserController` - Authentication and user management (Register & Login fully wired)
-- `FoldersController` - Manage folder hierarchies (CRUD operations, awaiting CQRS wiring)
+- `UserController` - Authentication and user management (Register & Login fully wired with unified UserAuthDto)
+- `FoldersController` - Manage folder hierarchies (All CQRS handlers complete: Create, Read, Update, Delete, Move, Search, RecycleBin)
 - `FilesController` - Manage file operations (CRUD operations, awaiting CQRS wiring)
 
 **Domain Models** (Entities):
@@ -172,7 +172,8 @@ Sentinal/
 - Prevents accidental data loss and maintains audit trail
 
 **JWT Authentication** (Phase 1 - Complete):
-- ✅ Token generation in `LoginUserCommand` after successful password verification via `JwtTokenService`
+- ✅ Token generation in both `LoginUserCommand` and `RegisterUserCommand` via `JwtTokenService`
+- ✅ Registration returns `UserAuthDto` with token for immediate login (auto-login on sign-up)
 - ✅ Claims include: userId (custom), ClaimTypes.Name, ClaimTypes.Email
 - ✅ `JwtTokenService` provides `GenerateToken()` and `ValidateToken()` methods
 - ✅ Algorithm: HmacSha256 with SymmetricSecurityKey from `Jwt:Key` in appsettings.json
@@ -354,22 +355,24 @@ public class RegisterUserRequest
 **2. Create CQRS Command** (`Application/Users/{Feature}/`):
 ```csharp
 public record RegisterUserCommand(string Username, string Email, string Password) 
-    : IRequest<Result<RegisterUserDto>>;
+    : IRequest<Result<UserAuthDto>>;
 ```
 
 **3. Implement Handler with Logging**:
 ```csharp
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<RegisterUserDto>>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<UserAuthDto>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenService _jwtTokenService;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
 
-    public async Task<Result<RegisterUserDto>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
+    public async Task<Result<UserAuthDto>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
     {
         // Validation, business logic, error handling
-        _logger.LogError(e, "Error creating user with username {Username}", command.Username);
-        return Result.Ok(new RegisterUserDto(...));
+        var user = await _userRepository.CreateUserAsync(command.Username, command.Email, hashedPassword);
+        var token = _jwtTokenService.GenerateToken(user);
+        return Result.Ok(new UserAuthDto(user.Id, user.Username, user.Email, token));
     }
 }
 ```
@@ -377,7 +380,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
 **4. Wire in Controller**:
 ```csharp
 [HttpPost("register")]
-public async Task<ActionResult<RegisterUserDto>> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
+public async Task<ActionResult<UserAuthDto>> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
 {
     var command = new RegisterUserCommand(request.Username, request.Email, request.Password);
     var commandResult = await _mediator.Send(command, ct);
@@ -401,8 +404,10 @@ dotnet test /p:CollectCoverage=true
 **Repository Pattern**:
 - All data access through repository interfaces defined in `Application/Common/Interfaces/`
 - Implementations in `Infrastructure/{Entity}/Persistence/`
-- Methods return `Result<T>` (FluentResults pattern)
+- Repositories return raw values or throw exceptions for validation failures
+- Handlers wrap repository results in `Result<T>` (FluentResults pattern) for API responses
 - Repositories handle EF Core `SaveChangesAsync()` internally
+- Example: `FolderRepository` validates business logic (duplicate names, ownership) in repository methods
 
 **CQRS with MediatR**:
 - Commands in `Application/Commands/` for write operations
@@ -424,15 +429,19 @@ dotnet test /p:CollectCoverage=true
 ## Notes for Future Developers
 
 - This project uses modern C# idioms (nullable reference types, implicit usings, property initialization)
-- All repository and service methods return `Result<T>` (not exceptions for expected errors)
+- Repositories handle business logic validation (ownership checks, duplicate prevention) and throw exceptions for failures
+- Handlers catch repository exceptions and wrap them in `Result<T>` for consistent API error handling
 - Password hashing is centralized in `Argon2PasswordService`—never hash passwords in command handlers
 - File storage is abstracted—add new providers by implementing `IFileStorageService`
-- Soft deletes are enforced across all entities—use MarkedForDeletion before DeleteFileAsync
+- Soft deletes are enforced across all entities—use MarkFolderAsDeletedAsync, not direct deletion
 - The GUID-based file path structure prevents naming conflicts and maintains security
 - Entity relationships are configured with `OnDelete(DeleteBehavior.Restrict)` to prevent orphaning
 - MediatR registration auto-discovers handlers in the Application assembly
-- All command/query handlers should inject `ILogger<T>` for audit trails and debugging (see User CQRS pattern)
+- All command/query handlers should inject `ILogger<T>` for audit trails and debugging (see User & Folder CQRS patterns)
 - Controller endpoints map request DTOs → commands/queries → handlers → response DTOs (see UserController for reference)
+- **FolderRepository** is fully implemented with: Create, Read (GetFolder, GetAllFolders, GetSubfolders, SearchByName), Update (rename), Move (with duplicate check), Delete (soft), and RecycleBin queries
+- **User authentication** uses unified `UserAuthDto` for both register and login responses with token
+- Registration (`RegisterUserCommand`) now returns JWT token for immediate login—no separate login required
 - JWT is implemented via `JwtTokenService`—use `ValidateToken()` to extract `ClaimsPrincipal` in middleware
 - All Folder/File endpoints must have [Authorize] attribute and extract UserId from JWT claims in handlers
 - When implementing 2FA, use the `TwoFactorEnabled` flag and `CreatedAt`/`UpdatedAt` for audit trails

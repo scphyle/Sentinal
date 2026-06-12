@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Sentinal.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("[controller]")]
 public class FolderController : ControllerBase
 {

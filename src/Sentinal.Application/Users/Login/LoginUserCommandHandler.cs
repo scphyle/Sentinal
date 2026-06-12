@@ -2,12 +2,13 @@ using FluentResults;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
+using Sentinal.Application.Users.DTOs;
 using Sentinal.Domain.Users;
 using Sentinal.Infrastructure.Common.Security;
 
 namespace Sentinal.Application.Users.Login;
 
-public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<LoginUserDto>>
+public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<UserAuthDto>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -22,7 +23,7 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         _jwtTokenService = jwtTokenService;
     }
 
-    public async Task<Result<LoginUserDto>> Handle(LoginUserCommand loginRequest, CancellationToken cancellationToken)
+    public async Task<Result<UserAuthDto>> Handle(LoginUserCommand loginRequest, CancellationToken cancellationToken)
     {
         if(string.IsNullOrEmpty(loginRequest.Email) && string.IsNullOrEmpty(loginRequest.Username))
             return Result.Fail("Email or Username is required");
@@ -54,7 +55,7 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         {
             _logger.LogInformation("User logged in successfully: {UserId}", user.Id);
             var token = _jwtTokenService.GenerateToken(user);
-            return Result.Ok(new LoginUserDto(user.Username, user.Email, user.Id, token));
+            return Result.Ok(new UserAuthDto(user.Id, user.Username, user.Email, token));
         }
 
         _logger.LogWarning("Failed login attempt for user: {UserId}", user.Id);

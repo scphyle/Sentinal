@@ -2,12 +2,14 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sentinal.Api.Models.Requests;
+using Sentinal.Application.Users.DTOs;
 using Sentinal.Application.Users.Login;
 using Sentinal.Application.Users.Register;
 
 namespace Sentinal.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class UserController : ControllerBase
 {
@@ -18,20 +20,22 @@ public class UserController : ControllerBase
         _mediator = mediator;
     }
 
+    [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<ActionResult<RegisterUserDto>> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
+    public async Task<ActionResult<UserAuthDto>> Register([FromBody] RegisterUserRequest request, CancellationToken ct)
     {
         var command = new RegisterUserCommand(request.Username, request.Email, request.Password);
         var commandResult = await _mediator.Send(command, ct);
         if(commandResult.IsSuccess)
         {
-            return Ok(new RegisterUserDto(commandResult.Value.Id, commandResult.Value.Username, commandResult.Value.Email));
+            return Ok(commandResult.Value);
         }
         return BadRequest(commandResult.Errors);
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<LoginUserDto>> Login([FromBody] LoginUserRequest request, CancellationToken ct)
+    public async Task<ActionResult<UserAuthDto>> Login([FromBody] LoginUserRequest request, CancellationToken ct)
     {
         var command = new LoginUserCommand(request.Password, request.Username, request.Email);
         var commandResult = await _mediator.Send(command, ct);
@@ -41,7 +45,7 @@ public class UserController : ControllerBase
         }
         return BadRequest(commandResult.Errors);
     }
-    [Authorize]
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -49,7 +53,6 @@ public class UserController : ControllerBase
         return NotFound("Not implemented Logout");
     }
 
-    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUser(Guid id)
     {
@@ -57,35 +60,30 @@ public class UserController : ControllerBase
         return NotFound("Not implemented GetUser");
     }
 
-    [Authorize]
     [HttpPost("update-password")]
     public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdatePassword");
     }
 
-    [Authorize]
     [HttpPost("update-email")]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateUserEmailRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdateEmail");
     }
 
-    [Authorize]
     [HttpPost("update-username")]
     public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented UpdateUsername");
     }
 
-    [Authorize]
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail([FromBody] UpdateUserEmailConfirmedRequest request, CancellationToken ct)
     {
         return NotFound("Not implemented ConfirmEmail");
     }
 
-    [Authorize]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
