@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="FIles\" />
+      <Folder Include="Files\DTOs\" />
     </ItemGroup>
 
 </Project>

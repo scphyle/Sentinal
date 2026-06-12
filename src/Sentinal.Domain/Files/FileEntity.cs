@@ -8,6 +8,7 @@ public class FileEntity
     public string FileName { get; set; } = string.Empty;
     public long FileSize { get; set; }
     public string ContentType { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
     public Guid FolderId { get; set; }
     public Guid UserId { get; set; }
     public DateTime CreatedAt { get; set; }

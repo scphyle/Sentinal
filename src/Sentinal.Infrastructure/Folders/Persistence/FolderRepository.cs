@@ -57,7 +57,8 @@ public class FolderRepository : IFolderRepository
     public async Task<List<FolderEntity>> GetFolderByNameAsync(string name, Guid userId)
     {
         return await _context.Folders
-            .Where(f => EF.Functions.Like(f.FolderName.ToLower(), $"%{name.ToLower()}%") && f.UserId == userId && !f.MarkedForDeletion)
+            .Where(f => EF.Functions.Like(f.FolderName.ToLower(), $"%{name.ToLower()}%")
+                        && f.UserId == userId && !f.MarkedForDeletion)
             .ToListAsync();
     }
 

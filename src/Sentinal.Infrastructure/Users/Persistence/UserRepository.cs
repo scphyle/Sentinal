@@ -16,6 +16,10 @@ public class UserRepository : IUserRepository
 
     public async Task<UserEntity> CreateUserAsync(string username, string email, string passwordHash)
     {
+        if(await EmailExistsAsync(email))
+            throw new InvalidOperationException("duplicate email");
+        if(await UsernameExistsAsync(username))
+            throw new InvalidOperationException("duplicate username");
         var newUser = new UserEntity()
         {
             Email = email,

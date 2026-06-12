@@ -1,0 +1,57 @@
+using FluentResults;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Sentinal.Application.Common.Interfaces;
+using Sentinal.Application.FIles.Create;
+
+namespace Sentinal.Application.Files.Create;
+
+
+public class CreateFileCommandHandler : IRequestHandler<CreateFileCommand, Result<Guid>>
+{
+    private readonly IFileStorageService _fileStorageService;
+    private readonly ILogger<CreateFileCommandHandler> _logger;
+    private readonly IFileRepository _fileRepository;
+    public CreateFileCommandHandler(IFileStorageService fileStorageService,
+        IFileRepository fileRepository,
+        ILogger<CreateFileCommandHandler> logger)
+    {
+        _fileStorageService = fileStorageService;
+        _fileRepository = fileRepository;
+        _logger = logger;
+    }
+    public async Task<Result<Guid>> Handle(CreateFileCommand request, CancellationToken cancellationToken)
+    {
+        if(request.FolderId == Guid.Empty)
+            return Result.Fail("FolderId cannot be empty");
+        if(request.UserId == Guid.Empty)
+            return Result.Fail("UserId cannot be empty");
+        if(string.IsNullOrWhiteSpace(request.Name))
+            return Result.Fail("Name cannot be empty");
+        if(string.IsNullOrWhiteSpace(request.ContentType))
+            return Result.Fail("ContentType cannot be empty");
+
+        try
+        {
+            //TODO: Possible problem with a orphanded record, should be solved using IUnitOfWork
+            var file = await _fileRepository.CreateFileAsync(
+                request.Name,
+                request.Stream.Length,
+                request.ContentType,
+                request.UserId,
+                request.FolderId,
+                request.Description);
+            await _fileStorageService.SaveFileAsync(request.UserId,
+                request.FolderId,
+                file.Id,
+                request.Stream);
+            return Result.Ok(file.Id);
+        }
+        catch(Exception ex)
+        {
+            _logger.LogError(ex, "Error creating file");
+            return Result.Fail("Error creating file");
+        }
+
+    }
+}
