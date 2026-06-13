@@ -47,17 +47,37 @@ public class FileRepository : IFileRepository
         return newFile;
     }
 
-    public async Task<List<FileEntity>> GetFilesAsync(Guid userId)
+    public async Task<List<FileEntity>> GetAllUserFilesAsync(Guid userId)
     {
-        return await _context.Files.Where(x => x.UserId == userId && !x.MarkedForDeletion).ToListAsync();
+        return await _context.Files.Where(x => x.UserId == userId && 
+                                               !x.MarkedForDeletion &&
+                                               !x.IsPartOfHistory).ToListAsync();
     }
 
+    //TODO: Figure out if we should allow users to search for files marked as deleted and ones that are part of history
     public async Task<FileEntity?> GetFileAsync(Guid fileId, Guid userId)
     {
         return await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId &&
-                                                             x.UserId == userId &&
-                                                             !x.MarkedForDeletion);
+                                                             x.UserId == userId );
     }
+
+    public async Task<List<FileEntity>> GetFileHistory(Guid fileId, Guid userId)
+    {
+        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && x.UserId == userId);
+        if (file == null)
+            throw new InvalidOperationException("File not found");
+
+        var history = new List<FileEntity> { file };
+        while (file.PreviousVersionId is Guid previousId)
+        {
+            file = await _context.Files.FirstOrDefaultAsync(x => x.Id == previousId && x.UserId == userId);
+            if (file == null) break;
+            history.Add(file);
+        }
+        return history;
+    }
+
+
 
     public async Task<List<FileEntity>> GetFilesByFolderIdAsync(Guid folderId, Guid userId)
     {
@@ -65,12 +85,14 @@ public class FileRepository : IFileRepository
         if (folder == null)
             throw new InvalidDataException("Folder does not exist");
         return await _context.Files.Where(x => x.FolderId == folderId &&
-                                                    !x.MarkedForDeletion).ToListAsync();
+                                                    !x.MarkedForDeletion &&
+                                                    !x.IsPartOfHistory).ToListAsync();
     }
 
     public async Task<List<FileEntity>> GetFilesMarkedForDeletionAsync(Guid userId)
     {
-        return await _context.Files.Where(x => x.MarkedForDeletion && x.UserId == userId).ToListAsync();
+        return await _context.Files.Where(x => x.MarkedForDeletion && 
+                                               x.UserId == userId).ToListAsync();
     }
 
     public async Task<bool> FileExistsAsync(Guid fileId, Guid userId)
@@ -98,7 +120,9 @@ public class FileRepository : IFileRepository
         var newFolder = await _folderRepository.GetFolderAsync(destinationFolderId, userId);
         if (newFolder == null)
             throw new InvalidOperationException("Destination folder not found");
-        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && x.UserId == userId);
+        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && 
+                                                                 x.UserId == userId &&
+                                                                 x.IsPartOfHistory);
         if (file == null)
             throw new InvalidOperationException("File not found");
         file.FolderId = destinationFolderId;
@@ -107,6 +131,29 @@ public class FileRepository : IFileRepository
         return await _context.SaveChangesAsync() > 0;
     }
 
+    public async Task<(FileEntity newFile,FileEntity oldFile)> UpdateFileContentAsync(Guid fileId, Guid userId, long fileSize, string? description = null)
+    {
+        var file = await  _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && x.UserId == userId);
+        if (file == null)
+            throw new InvalidOperationException("File not found");
+        
+        var newFile = file.Copy();
+        file.IsPartOfHistory = true;
+        file.UpdatedAt = DateTime.UtcNow;
+        file.FolderId = await _folderRepository.GetRecyclingFolderIdAsync(userId);
+        await  _context.Files.AddAsync(newFile);
+        
+        newFile.PreviousVersionId = file.Id;
+        if (description != null)
+            newFile.Description = description;
+        newFile.UpdatedAt = DateTime.UtcNow;
+        newFile.FileSize = fileSize;
+        await _context.Files.AddAsync(newFile);
+        await _context.SaveChangesAsync();
+        return (newFile,file);
+        
+    }
+    
     public async Task<bool> UpdateFileNameAsync(Guid id, string newName, Guid userId)
     {
         var file = await _context.Files.FirstOrDefaultAsync(f => f.Id == id && f.UserId == userId);

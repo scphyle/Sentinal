@@ -22,7 +22,17 @@ public class AzureBlobFileStorageService : IFileStorageService
         throw new NotImplementedException();
     }
 
-    public Task<Stream?> GetFileAsync(Guid userId, Guid folderId, Guid fileId)
+    public Task<Stream> GetFileAsync(Guid userId, Guid fileId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> CreateFolderAsync(Guid userId, Guid folderId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<bool> CreateRootFolderAsync(Guid userId)
     {
         throw new NotImplementedException();
     }

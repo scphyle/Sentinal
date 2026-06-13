@@ -1,3 +1,7 @@
+using FluentResults;
+using MediatR;
+using Sentinal.Application.Files.DTOs;
+
 namespace Sentinal.Application.FIles.SearchFileByName;
 
-public record SearchFileByNameQuery();
+public record SearchFileByNameQuery(string FileName, Guid UserId): IRequest<Result<List<FileDataDto>>>;

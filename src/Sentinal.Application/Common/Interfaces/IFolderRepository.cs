@@ -16,5 +16,7 @@ public interface IFolderRepository
     Task<bool> MoveFolderAsync(Guid sourceFolderId, Guid destinationFolderId, Guid userId);
     Task<bool> UpdateFolderNameAsync(Guid folderId, string newName, Guid userId);
     Task<bool> CheckIfFolderExistsAsync(Guid id, Guid userId);
+    Task<Guid> GetRecyclingFolderIdAsync(Guid userId);
+    Task<Guid> GetHistoryFolderIdAsync(Guid userId);
 
 }

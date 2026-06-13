@@ -22,8 +22,18 @@ public interface IFileStorageService
     /// <summary>
     /// Retrieves a file from storage as a stream.
     /// </summary>
-    Task<Stream> GetFileAsync(Guid userId, Guid folderId, Guid fileId);
-
+    Task<Stream> GetFileAsync(Guid userId, Guid fileId);
+    
+    /// <summary>
+    /// Creates a new folder
+    /// </summary>
+    Task<bool> CreateFolderAsync(Guid userId, Guid folderId);
+    
+    /// <summary>
+    /// Creates a new root folder when a user first signs up, their root folder id is their userId
+    /// </summary>
+    Task<bool> CreateRootFolderAsync(Guid userId);
+    
     /// <summary>
     /// Moves a file to a different folder.
     /// </summary>

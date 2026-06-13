@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Sentinal.Domain.Files;
 using Sentinal.Domain.Folders;
 

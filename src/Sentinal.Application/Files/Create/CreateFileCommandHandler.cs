@@ -33,10 +33,10 @@ public class CreateFileCommandHandler : IRequestHandler<CreateFileCommand, Resul
 
         try
         {
-            //TODO: Possible problem with a orphanded record, should be solved using IUnitOfWork
+            //TODO: Possible problem with a orphaned record, should be solved using IUnitOfWork
             var file = await _fileRepository.CreateFileAsync(
                 request.Name,
-                request.Stream.Length,
+                request.FileSize,
                 request.ContentType,
                 request.UserId,
                 request.FolderId,
@@ -49,6 +49,9 @@ public class CreateFileCommandHandler : IRequestHandler<CreateFileCommand, Resul
         }
         catch(Exception ex)
         {
+            //If something is wrong with the db this will also throw but if something is wrong with the SaveFileAsync
+            //then this will clean up the orphaned record
+            await _fileRepository.MarkFileAsDeletedAsync(request.FolderId, request.UserId);
             _logger.LogError(ex, "Error creating file");
             return Result.Fail("Error creating file");
         }

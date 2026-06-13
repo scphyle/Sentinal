@@ -15,8 +15,4 @@
       <ProjectReference Include="..\Sentinal.Domain\Sentinal.Domain.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Files\DTOs\" />
-    </ItemGroup>
-
 </Project>

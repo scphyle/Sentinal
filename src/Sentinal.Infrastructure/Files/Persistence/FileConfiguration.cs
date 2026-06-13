@@ -26,6 +26,13 @@ public class FileConfiguration : IEntityTypeConfiguration<FileEntity>
         builder.Property(x => x.UpdatedAt).IsRequired();
         builder.Property(x => x.MarkedForDeletion).IsRequired();
         builder.Property(x => x.DeletedAt).IsRequired(false);
+        builder.Property(x => x.PreviousVersionId);
+        builder.HasOne<FileEntity>()
+            .WithMany()
+            .HasForeignKey(x => x.PreviousVersionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(x => x.IsPartOfHistory);
 
         // Relationships
         // Many files belong to one folder

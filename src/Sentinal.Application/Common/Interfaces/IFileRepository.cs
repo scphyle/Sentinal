@@ -10,7 +10,7 @@ public interface IFileRepository
         Guid userId,
         Guid folderId,
         string? description = null);
-    Task<List<FileEntity>> GetFilesAsync(Guid userId);
+    Task<List<FileEntity>> GetAllUserFilesAsync(Guid userId);
     Task<FileEntity?> GetFileAsync(Guid fileId, Guid userId);
     Task<List<FileEntity>> GetFilesByFolderIdAsync(Guid folderId, Guid userId);
     Task<List<FileEntity>> GetFilesMarkedForDeletionAsync(Guid userId);
@@ -21,5 +21,6 @@ public interface IFileRepository
     Task<bool> UpdateFileDescriptionAsync(Guid id, string newDescription, Guid userId);
     Task<List<FileEntity>> SearchFilesByNameAsync(string fileName, Guid userId);
     Task<bool> PermanentlyDeleteFileAsync(Guid id, Guid userId);
-
+    Task<(FileEntity newFile,FileEntity oldFile)> UpdateFileContentAsync(Guid fileId, Guid userId, long fileSize, string? description = null);
+    Task<List<FileEntity>> GetFileHistory(Guid fileId, Guid userId);
 }

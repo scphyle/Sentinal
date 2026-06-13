@@ -8,10 +8,11 @@ namespace Sentinal.Infrastructure.Folders.Persistence;
 public class FolderRepository : IFolderRepository
 {
     private readonly SentinalDbContext _context;
-
-    public FolderRepository(SentinalDbContext context)
+    private readonly IUserRepository _userRepository;
+    public FolderRepository(SentinalDbContext context, IUserRepository userRepository)
     {
         _context = context;
+        _userRepository = userRepository;
     }
 
 
@@ -31,7 +32,7 @@ public class FolderRepository : IFolderRepository
             return newEntity.Entity;
         throw new InvalidOperationException("Failed to create folder");
     }
-
+    
     #region GetGroup
 
     public async Task<List<FolderEntity>> GetAllFoldersAsync(Guid userId)
@@ -69,9 +70,25 @@ public class FolderRepository : IFolderRepository
             .Where(f => f.ParentFolderId == folderId && f.UserId == userId && !f.MarkedForDeletion)
             .ToListAsync();
     }
+    public async Task<Guid> GetRecyclingFolderIdAsync(Guid userId)
+    {
+        var userName = await _userRepository.GetUserByIdAsync(userId);
+        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderName == userName + "_" + nameof(SpecialFolderTypes.RecycleBin));
+        if(folder == null)
+            throw new InvalidOperationException("Folder not found or user does not own this folder");
+        return folder.Id;
+    }
 
+    public async Task<Guid> GetHistoryFolderIdAsync(Guid userId)
+    {
+        var userName = await _userRepository.GetUserByIdAsync(userId);
+        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderName == userName + "_" + nameof(SpecialFolderTypes.History));
+        if(folder == null)
+            throw new InvalidOperationException("Folder not found or user does not own this folder");
+        return folder.Id;
+    }
     #endregion
-
+    
     #region Existence Checks
 
     public async Task<bool> CheckIfFolderExistsUnderParentAsync(string name, Guid? parentFolderId, Guid userId)
@@ -88,6 +105,8 @@ public class FolderRepository : IFolderRepository
         return await _context.Folders
             .AnyAsync(f => f.Id == id && f.UserId == userId && !f.MarkedForDeletion);
     }
+
+
 
     #endregion
 
