@@ -21,6 +21,7 @@ public class FolderConfiguration : IEntityTypeConfiguration<FolderEntity>
         builder.Property(x => x.UpdatedAt).IsRequired();
         builder.Property(x => x.MarkedForDeletion).IsRequired();
         builder.Property(x => x.DeletedAt).IsRequired(false);
+        builder.Property(x => x.FolderType).IsRequired(false);
 
         // Relationships
         // Self-referencing: Parent-Child folder hierarchy

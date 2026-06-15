@@ -12,7 +12,8 @@ public interface IFolderRepository
     Task<List<FolderEntity>> GetFoldersSubFoldersAsync(Guid folderId, Guid userId);
     Task<bool> MarkFolderAsDeletedAsync(Guid folderId, Guid userId);
     Task<List<FolderEntity>> GetFoldersMarkedForDeletionAsync(Guid userId);
-    Task<FolderEntity> CreateFolderAsync(string name, Guid userId, Guid? parentId = null);
+    Task<FolderEntity> CreateFolderAsync(string name, Guid userId, Guid? parentId = null, SpecialFolderTypes? folderType = null);
+    Task<FolderEntity> CreateRootFolderAsync(string name, Guid userId);
     Task<bool> MoveFolderAsync(Guid sourceFolderId, Guid destinationFolderId, Guid userId);
     Task<bool> UpdateFolderNameAsync(Guid folderId, string newName, Guid userId);
     Task<bool> CheckIfFolderExistsAsync(Guid id, Guid userId);

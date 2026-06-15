@@ -8,21 +8,20 @@ namespace Sentinal.Infrastructure.Folders.Persistence;
 public class FolderRepository : IFolderRepository
 {
     private readonly SentinalDbContext _context;
-    private readonly IUserRepository _userRepository;
-    public FolderRepository(SentinalDbContext context, IUserRepository userRepository)
+    public FolderRepository(SentinalDbContext context)
     {
         _context = context;
-        _userRepository = userRepository;
     }
 
 
-    public async Task<FolderEntity> CreateFolderAsync(string name, Guid userId, Guid? parentId = null)
+    public async Task<FolderEntity> CreateFolderAsync(string name, Guid userId, Guid? parentId = null, SpecialFolderTypes? folderType = null)
     {
         var folder = new FolderEntity
         {
             FolderName = name,
             UserId = userId,
             ParentFolderId = parentId,
+            FolderType = folderType,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -31,6 +30,24 @@ public class FolderRepository : IFolderRepository
         if (await _context.SaveChangesAsync() > 0)
             return newEntity.Entity;
         throw new InvalidOperationException("Failed to create folder");
+    }
+
+    public async Task<FolderEntity> CreateRootFolderAsync(string name, Guid userId)
+    {
+        var folder = new FolderEntity
+        {
+            Id = userId,
+            FolderName = name,
+            UserId = userId,
+            ParentFolderId = null,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var newEntity = await _context.Folders.AddAsync(folder);
+        if (await _context.SaveChangesAsync() > 0)
+            return newEntity.Entity;
+        throw new InvalidOperationException("Failed to create root folder");
     }
     
     #region GetGroup
@@ -45,6 +62,8 @@ public class FolderRepository : IFolderRepository
     public async Task<FolderEntity?> GetFolderAsync(Guid id, Guid userId)
     {
         return await _context.Folders
+            .Include(f => f.Files.Where(file => !file.MarkedForDeletion && !file.IsPartOfHistory))
+            .Include(f => f.Children.Where(c => !c.MarkedForDeletion))
             .FirstOrDefaultAsync(f => f.Id == id && f.UserId == userId && !f.MarkedForDeletion);
     }
 
@@ -72,8 +91,7 @@ public class FolderRepository : IFolderRepository
     }
     public async Task<Guid> GetRecyclingFolderIdAsync(Guid userId)
     {
-        var userName = await _userRepository.GetUserByIdAsync(userId);
-        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderName == userName + "_" + nameof(SpecialFolderTypes.RecycleBin));
+        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderType == SpecialFolderTypes.RecycleBin && f.UserId == userId);
         if(folder == null)
             throw new InvalidOperationException("Folder not found or user does not own this folder");
         return folder.Id;
@@ -81,8 +99,7 @@ public class FolderRepository : IFolderRepository
 
     public async Task<Guid> GetHistoryFolderIdAsync(Guid userId)
     {
-        var userName = await _userRepository.GetUserByIdAsync(userId);
-        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderName == userName + "_" + nameof(SpecialFolderTypes.History));
+        var folder = await _context.Folders.FirstOrDefaultAsync(f => f.FolderType == SpecialFolderTypes.History && f.UserId == userId);
         if(folder == null)
             throw new InvalidOperationException("Folder not found or user does not own this folder");
         return folder.Id;

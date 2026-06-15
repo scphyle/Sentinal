@@ -20,7 +20,10 @@ public class JwtTokenService : IJwtTokenService
     }
     public string GenerateToken(UserEntity user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Secret"] ?? 
+                                                                  throw new InvalidOperationException(
+                                                                      "You must set a Secret key reference documentation" +
+                                                                      "section Security: setting Jwt Secret")));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
@@ -44,7 +47,10 @@ public class JwtTokenService : IJwtTokenService
 
     public ClaimsPrincipal? ValidateToken(string token)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Secret"] ?? 
+                                                                  throw new InvalidOperationException(
+                                                                      "You must set a Secret key reference documentation" +
+                                                                      "section Security: setting Jwt Secret")));
 
         try
         {

@@ -37,6 +37,20 @@ The API will start on:
 - HTTP: `http://localhost:5230`
 - HTTPS: `https://localhost:7096`
 
+### Run with Docker (recommended for local dev)
+```bash
+# Copy the env template and fill in secrets (JWT secret, Postgres creds, optional Azure storage)
+cp .env.example .env
+
+# Build and start Postgres + API
+docker compose up --build
+```
+- API is published on `http://localhost:5230` (container port 8080)
+- Postgres data persists in the `pgdata` named volume
+- Local file storage persists in the `file_storage` named volume, mounted at `/data/files` in the container
+- EF Core migrations run automatically on container startup (`db.Database.Migrate()` in `Program.cs`) — no manual `dotnet ef database update` needed for first-time setup
+- `FILE_STORAGE_PROVIDER` env var switches between `Local` and `AzureBlob` (see `.env.example`)
+
 ### Run Tests
 ```bash
 # Run all XUnit tests
@@ -54,12 +68,14 @@ When running in development mode, OpenAPI documentation is available at:
 - `http://localhost:5230/openapi/v1.json`
 
 ### Database Migrations
+The `InitialCreate` migration exists in `Sentinal.Infrastructure/Migrations/` and is applied automatically on API startup via `db.Database.Migrate()`. For manual/local (non-Docker) work:
+
 ```bash
 # Apply pending migrations
-dotnet ef database update
+dotnet ef database update -p src/Sentinal.Infrastructure -s src/Sentinal.Api
 
 # Create a new migration
-dotnet ef migrations add MigrationName
+dotnet ef migrations add MigrationName -p src/Sentinal.Infrastructure -s src/Sentinal.Api
 ```
 
 ## Architecture
@@ -119,12 +135,12 @@ Sentinal/
 - **Handlers**: Implement command/query logic using MediatR
 - All commands and queries flow through MediatR pipeline for cross-cutting concerns
 
-### Current Phase 1 Scope (90% Complete)
+### Current Phase 1 Scope (~98% Complete)
 
 **Controllers** (Presentation Layer):
-- `UserController` - Authentication and user management (Register & Login fully wired with unified UserAuthDto)
-- `FoldersController` - Manage folder hierarchies (All CQRS handlers complete: Create, Read, Update, Delete, Move, Search, RecycleBin)
-- `FilesController` - Manage file operations (CRUD operations, awaiting CQRS wiring)
+- `UserController` - Register, Login, UpdatePassword, UpdateEmail, UpdateUsername, ConfirmEmail, soft DeleteUser all wired (UserAuthDto reissued with new JWT on email/username change). Logout and GetUser-by-id remain Phase 2 stubs.
+- `FileController` - Fully wired CQRS endpoints: Create (multipart upload via `[FromForm]`), Get/GetAll/GetAllInFolder, Update name/description, Move, Delete, Search, RecycleBin, and `PUT` content update (`UpdateFileContentCommand`, retains version history). `GET /api/File/{fileId}` streams the file bytes directly (acts as the download endpoint — no separate download route needed). File history/versioning available via repository (`GetFileHistory`) but not exposed as its own endpoint yet.
+- `FolderController` - Fully wired CQRS endpoints: Create, GetById/GetAll/Subfolders, UpdateName, Move, Delete, Search, RecycleBin. `CreateFolder` defaults `ParentId` to the user's root folder (`Id == UserId`) when none is supplied.
 
 **Domain Models** (Entities):
 - **UserEntity**: User authentication and file/folder ownership
@@ -136,7 +152,9 @@ Sentinal/
 - **FolderEntity**: Hierarchical folder structure
   - `Id` (Guid), `FolderName` (string, 255 max), `ParentFolderId` (Guid, nullable for root)
   - `UserId` (Guid), timestamps, soft delete fields
+  - `FolderType` (nullable `SpecialFolderTypes` enum: `RecycleBin`, `History`) - identifies a user's special folders independent of their display name, so renames (e.g. on username change) don't break lookups
   - Navigation: `Parent` (self-reference), `Children` (collection), `Files`
+  - A user's root folder has `Id == UserId` and `ParentFolderId == null` (created via `CreateRootFolderAsync` on registration)
 
 - **FileEntity**: File storage and metadata
   - `Id` (Guid), `FileName` (string, 1000 max for long names), `FileSize` (long)
@@ -158,11 +176,11 @@ Sentinal/
 - Service is registered in Infrastructure DI layer
 
 **File Storage Security**:
-- Storage path structure: `/{userId}/{folderId}/{fileId}` (all GUIDs)
+- Storage is **flat per-user**: `/{BasePath}/{userId}/{fileId}` (all GUIDs) — the folder hierarchy is virtual and exists only in the database (`FolderEntity`/`FolderId`), not on disk
 - GUID-based paths prevent naming conflicts and provide security through obscurity
 - User-provided filenames stored in database, not filesystem
-- Multiple storage provider support (Local, AWS S3, Azure Blob) via `IFileStorageService`
-- Configuration-driven via `FileStorageOptions` with `StorageType` enum
+- Multiple storage provider support (Local, AWS S3, Azure Blob) via `IFileStorageService` — `LocalFileStorageService` and `AzureBlobFileStorageService` implemented; `S3FileStorageService` still a stub
+- Configuration-driven via `FileStorageOptions` with `StorageType` enum (`FileStorage:StorageProvider` config/env var)
 - Future: AES-256 encryption at rest (post-submission enhancement)
 
 **Soft Deletes**:
@@ -176,13 +194,14 @@ Sentinal/
 - ✅ Registration returns `UserAuthDto` with token for immediate login (auto-login on sign-up)
 - ✅ Claims include: userId (custom), ClaimTypes.Name, ClaimTypes.Email
 - ✅ `JwtTokenService` provides `GenerateToken()` and `ValidateToken()` methods
-- ✅ Algorithm: HmacSha256 with SymmetricSecurityKey from `Jwt:Key` in appsettings.json
+- ✅ Algorithm: HmacSha256 with SymmetricSecurityKey from `Jwt:Secret` (set via `Jwt__Secret` env var / user secrets — appsettings.json ships with an empty placeholder)
 - ✅ Issuer and Audience validation configured
 - ✅ Token expiration: 120 minutes
 - ✅ Bearer token middleware configured in `Program.cs` with `AddAuthentication()` and `AddJwtBearer()`
 - ✅ TokenValidationParameters set up in Program.cs for ASP.NET Core validation pipeline
-- ⏳ Next: Add [Authorize] attributes to Folder/File controllers
-- ⏳ Next: Extract UserId from JWT claims in Folder/File handlers for authorization
+- ✅ `[Authorize]` on UserController/FileController/FolderController, `[AllowAnonymous]` on register/login
+- ✅ UserId extracted from JWT claims (`User.FindFirstValue("userId")`) in FileController/FolderController handlers
+- ✅ **Config bug fixed**: `JwtTokenService` and `Program.cs` both now read `Jwt:Secret` consistently; both throw a clear `InvalidOperationException` if it's missing
 
 **Future Authentication**:
 - 2FA support flagged in UserEntity (`TwoFactorEnabled`)
@@ -221,7 +240,9 @@ Sentinal/
 - `BasePath`: Local storage path (default: "./Sentinal")
 - `DeletedFileRetentionDays`: 7 (before permanent deletion)
 - AWS S3 options: AccessKey, SecretKey, Region, BucketName
-- Azure options: ConnectionString, ContainerName
+- Azure options: `AzureConnectionString`, `AzureContainerName` (bound from `FileStorage` config section; also configurable via `FILE_STORAGE_PROVIDER`/`AZURE_STORAGE_CONNECTION_STRING`/`AZURE_STORAGE_CONTAINER_NAME` env vars in docker-compose)
+- Bound in `Infrastructure/DependencyInjection.cs` via `services.Configure<FileStorageOptions>(configuration.GetSection("FileStorage"))`; the concrete `IFileStorageService` (Local/S3/Azure) is selected at registration time based on `StorageProvider`
+- `AzureBlobStorage` section in `appsettings.json` (`ConnectionString`, `ContainerName`) backs `AzureBlobFileStorageService`
 
 **launchSettings.json**: Defines two launch profiles (http and https) for local development:
 - Both disable automatic browser launching
@@ -271,14 +292,21 @@ This ensures you maintain full control and visibility over all repository change
 
 ## Testing the API
 
-Use the included `Sentinal.Api.http` file with REST Client plugins (available in Rider, VS Code, etc.) or use curl:
+Use `src/Sentinal.Api/Http/example.http` with Rider's HTTP Client (or another REST Client plugin) or curl:
+
+- `example.http` covers register → login → file upload/download/update → folder creation → recycle bin, end to end.
+- The login request is named (`# @name login`) and its response handler captures the JWT into a global var `authToken`, which subsequent requests reuse via `Authorization: Bearer {{authToken}}`.
+- `src/Sentinal.Api/Http/http-client.env.json` defines a `dev` environment — select it in Rider so captured response/global variables persist across requests in the file.
+- File upload/update endpoints (`POST`/`PUT /api/File`) require `multipart/form-data`, not JSON — see the `--SentinalBoundary` examples in `example.http`.
 
 ```bash
-# Get weather forecasts
-curl http://localhost:5230/weatherforecast
-
-# Pretty-print with jq (if installed)
-curl http://localhost:5230/weatherforecast | jq
+# Example: curl-based upload
+curl -s -X POST http://localhost:5230/api/File \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "FileName=test.txt" \
+  -F "ContentType=text/plain" \
+  -F "Description=Test upload" \
+  -F "File=@/path/to/test.txt;type=text/plain"
 ```
 
 ## CI/CD Pipeline

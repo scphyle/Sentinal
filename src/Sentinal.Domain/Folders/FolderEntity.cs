@@ -12,6 +12,7 @@ public class FolderEntity
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
     public bool MarkedForDeletion { get; set; }
+    public SpecialFolderTypes? FolderType { get; set; }
 
     // Navigation properties
     public FolderEntity? Parent { get; set; }

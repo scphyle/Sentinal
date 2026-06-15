@@ -45,15 +45,15 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
             var token = _jwtTokenService.GenerateToken(user);
             
             await _fileStorageService.CreateRootFolderAsync(user.Id);
-            //Creating the users main root drive
-            var rootFolder = await _folderRespository.CreateFolderAsync(user.Username, user.Id);
-            
+            //Creating the users main root drive (Id == user.Id)
+            var rootFolder = await _folderRespository.CreateRootFolderAsync(user.Username, user.Id);
+
             //Creating the users recycle bin
-            await _folderRespository.CreateFolderAsync(user.Username + "_" + SpecialFolderTypes.RecycleBin.ToString(), 
-                                                    user.Id, rootFolder.Id);
+            await _folderRespository.CreateFolderAsync(user.Username + "_" + SpecialFolderTypes.RecycleBin.ToString(),
+                                                    user.Id, rootFolder.Id, SpecialFolderTypes.RecycleBin);
             //Creating the users history bin
             await _folderRespository.CreateFolderAsync(user.Username + "_" + SpecialFolderTypes.History.ToString(),
-                                                    user.Id, rootFolder.Id);
+                                                    user.Id, rootFolder.Id, SpecialFolderTypes.History);
             
             _logger.LogInformation("User {Username} successfully registered", command.Username);
             return Result.Ok(new UserAuthDto(user.Id, user.Username, user.Email, token));

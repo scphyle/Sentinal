@@ -1,10 +1,16 @@
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sentinal.Api.Models.Requests;
+using Sentinal.Application.Users.ConfirmEmail;
+using Sentinal.Application.Users.Delete;
 using Sentinal.Application.Users.DTOs;
 using Sentinal.Application.Users.Login;
 using Sentinal.Application.Users.Register;
+using Sentinal.Application.Users.UpdateEmail;
+using Sentinal.Application.Users.UpdatePassword;
+using Sentinal.Application.Users.UpdateUsername;
 
 namespace Sentinal.Api.Controllers;
 
@@ -63,30 +69,62 @@ public class UserController : ControllerBase
     [HttpPost("update-password")]
     public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request, CancellationToken ct)
     {
-        return NotFound("Not implemented UpdatePassword");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+
+        var command = new UpdatePasswordCommand(userId, request.CurrentPassword, request.NewPassword);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
     }
 
     [HttpPost("update-email")]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateUserEmailRequest request, CancellationToken ct)
     {
-        return NotFound("Not implemented UpdateEmail");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+
+        var command = new UpdateUserEmailCommand(userId, request.NewEmail);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
     }
 
     [HttpPost("update-username")]
     public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request, CancellationToken ct)
     {
-        return NotFound("Not implemented UpdateUsername");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+
+        var command = new UpdateUsernameCommand(userId, request.NewUsername);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
     }
 
     [HttpPost("confirm-email")]
-    public async Task<IActionResult> ConfirmEmail([FromBody] UpdateUserEmailConfirmedRequest request, CancellationToken ct)
+    public async Task<IActionResult> ConfirmEmail(CancellationToken ct)
     {
-        return NotFound("Not implemented ConfirmEmail");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+
+        var command = new ConfirmEmailCommand(userId);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
-        return NotFound("Not implemented DeleteUser");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        if (id != userId)
+            return Forbid();
+
+        var command = new DeleteUserCommand(userId);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
     }
 }

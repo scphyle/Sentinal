@@ -31,27 +31,26 @@ public class CreateFileCommandHandler : IRequestHandler<CreateFileCommand, Resul
         if(string.IsNullOrWhiteSpace(request.ContentType))
             return Result.Fail("ContentType cannot be empty");
 
+        //TODO: Possible problem with a orphaned record, should be solved using IUnitOfWork
+        Domain.Files.FileEntity? file = null;
         try
         {
-            //TODO: Possible problem with a orphaned record, should be solved using IUnitOfWork
-            var file = await _fileRepository.CreateFileAsync(
+            file = await _fileRepository.CreateFileAsync(
                 request.Name,
                 request.FileSize,
                 request.ContentType,
                 request.UserId,
                 request.FolderId,
                 request.Description);
-            await _fileStorageService.SaveFileAsync(request.UserId,
-                request.FolderId,
-                file.Id,
-                request.Stream);
+            await _fileStorageService.SaveFileAsync(request.UserId, file.Id, request.Stream);
             return Result.Ok(file.Id);
         }
         catch(Exception ex)
         {
             //If something is wrong with the db this will also throw but if something is wrong with the SaveFileAsync
             //then this will clean up the orphaned record
-            await _fileRepository.MarkFileAsDeletedAsync(request.FolderId, request.UserId);
+            if (file != null)
+                await _fileRepository.MarkFileAsDeletedAsync(file.Id, request.UserId);
             _logger.LogError(ex, "Error creating file");
             return Result.Fail("Error creating file");
         }

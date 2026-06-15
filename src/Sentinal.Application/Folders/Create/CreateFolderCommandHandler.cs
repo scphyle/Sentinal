@@ -28,18 +28,20 @@ public class CreateFolderCommandHandler :  IRequestHandler<CreateFolderCommand, 
         if(command.ParentId.HasValue && command.ParentId.Value == Guid.Empty)
             return Result.Fail("Parent folder cannot be empty");
 
-        if (await _folderRepository.CheckIfFolderExistsUnderParentAsync(command.Name, command.ParentId, command.UserId))
+        // Default to the user's root folder (Id == UserId) when no parent is specified
+        var parentId = command.ParentId ?? command.UserId;
+
+        if (await _folderRepository.CheckIfFolderExistsUnderParentAsync(command.Name, parentId, command.UserId))
             return Result.Fail("A folder with this name already exists under the parent directory");
 
-        if(command.ParentId.HasValue && command.ParentId.Value != Guid.Empty)
-            if(!await _folderRepository.CheckIfFolderExistsAsync(command.ParentId.Value, command.UserId))
-                return Result.Fail("Parent folder does not exist");
+        if(!await _folderRepository.CheckIfFolderExistsAsync(parentId, command.UserId))
+            return Result.Fail("Parent folder does not exist");
 
         _logger.LogInformation("Creating folder {Name}", command.Name);
 
         try
         {
-           var newFolder =  await _folderRepository.CreateFolderAsync(command.Name, command.UserId, command.ParentId);
+           var newFolder =  await _folderRepository.CreateFolderAsync(command.Name, command.UserId, parentId);
             return Result.Ok(new CreateFolderDto(newFolder.Id, newFolder.FolderName, newFolder.ParentFolderId));
         }catch(Exception e)
         {

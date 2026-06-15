@@ -35,7 +35,7 @@ public class GetAllFilesQueryHandler : IRequestHandler<GetAllFilesQuery, Result<
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting all files for {request.UserId}", ex);
+            _logger.LogError(ex, "Error getting all files for {UserId}", request.UserId);
             return Result.Fail("Failed to get all files");
         }
     }

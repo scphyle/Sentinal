@@ -23,8 +23,11 @@
 - [x] JWT Token Generation in both LoginUserCommand and RegisterUserCommand with claims (UserId, Username, Email)
 - [x] UserRepository with full CRUD and recovery support
 - [x] Create unified user DTO (UserAuthDto) consolidating registration and login responses
-- [ ] UpdateUserCommand & handler (scaffolded, pending implementation)
-- [ ] DeleteUserCommand & handler (soft delete, scaffolded, pending implementation)
+- [x] UpdatePasswordCommand & handler (verifies current password via Argon2, hashes new)
+- [x] UpdateUserEmailCommand & handler (duplicate check, resets EmailConfirmed, reissues JWT)
+- [x] UpdateUsernameCommand & handler (duplicate check, reissues JWT)
+- [x] ConfirmEmailCommand & handler (sets EmailConfirmed - simplified, no token verification yet)
+- [x] DeleteUserCommand & handler (soft delete via MarkUserAsDeletedAsync)
 
 **Folder Commands & Queries**:
 - [x] CreateFolderCommand & handler with validation and duplicate name check
@@ -39,31 +42,37 @@
 - [x] Create folder-related DTOs (CreateFolderDto, FolderDto, UpdateFolderDto)
 
 **File Commands & Queries**:
-- [ ] CreateFileCommand & handler (upload file)
-- [ ] UpdateFileCommand & handler (metadata only, not file content)
-- [ ] DeleteFileCommand & handler (soft delete)
-- [ ] GetFileByIdQuery & handler
-- [ ] GetFilesByFolderQuery & handler
-- [ ] GetAllFilesQuery & handler
-- [ ] DownloadFileQuery & handler
-- [ ] Create file-related DTOs (CreateFileDto, FileDto, UpdateFileDto)
+- [x] CreateFileCommand & handler (upload file)
+- [x] UpdateFileNameCommand & handler (rename)
+- [x] UpdateFileDescriptionCommand & handler
+- [x] UpdateFileContentCommand & handler (new content, retains old version for history)
+- [x] MoveFileCommand & handler
+- [x] DeleteFileCommand & handler (soft delete)
+- [x] GetFileByIdQuery & handler
+- [x] GetAllFilesInFolderQuery & handler
+- [x] GetAllFilesQuery & handler
+- [x] SearchFileByNameQuery & handler
+- [x] GetAllFilesInRecycleBinQuery & handler
+- [x] GetFileHistory (file versioning) - repository method, returns prior versions
+- [x] Create file-related DTOs (FileDataDto, FileContentDto)
+- [x] File download - `GetFileByIdQuery`/`GET /api/File/{fileId}` streams the file bytes directly (FileStreamResult); no separate download endpoint needed
 
 ### Infrastructure Layer - Data Access & Services
 - [x] Set up Entity Framework Core DbContext (SentinalDbContext)
 - [x] Configure PostgreSQL connection in appsettings.json
 - [x] Entity configurations for File, Folder, User with constraints and relationships
 - [x] Implement Argon2PasswordService (IPasswordHasher)
-- [x] Implement LocalFileStorageService, S3FileStorageService, AzureBlobFileStorageService (IFileStorageService)
-- [x] Configure FileStorageOptions and StorageType enum
+- [x] Implement LocalFileStorageService (flat per-user storage `/{BasePath}/{userId}/{fileId}`) and AzureBlobFileStorageService (IFileStorageService); S3FileStorageService still a stub
+- [x] Configure FileStorageOptions and StorageType enum, bound from config via `services.Configure<FileStorageOptions>(...)`
 - [x] Implement User repository (IUserRepository) with soft-delete awareness and recovery flows
 - [x] **Implement JwtTokenService (IJwtTokenService)**
   - [x] Token generation with claims (UserId, Username, Email)
   - [x] Token validation and claim extraction
-  - [x] Configurable expiration (120 minutes) and secret key
-- [x] **Complete Folder repository implementation** (all CRUD, hierarchy, search, and soft-delete operations with validation)
-- [ ] **Complete File repository implementation** (GetFiles, update/delete methods)
-- [ ] Create and apply database migrations
-- [ ] Set up database initialization and seeding
+  - [x] Configurable expiration (120 minutes) and secret key (`Jwt:Secret`)
+- [x] **Complete Folder repository implementation** (all CRUD, hierarchy, search, and soft-delete operations with validation; `CreateRootFolderAsync` for `Id == UserId` root folders; `FolderType` enum for RecycleBin/History lookup)
+- [x] **Complete File repository implementation** (CRUD, move, search, recycle bin, content/version history)
+- [x] Create and apply database migrations (`InitialCreate`, applied automatically on startup via `db.Database.Migrate()`)
+- [x] Database initialization on first run handled by migration-on-startup (no separate seeding step needed for Phase 1)
 - [ ] Configure pgvector extension (preparation for semantic search)
 
 ### Presentation Layer - API Endpoints & Authentication
@@ -72,37 +81,48 @@
 - [x] LoginUserCommand returns JWT token in LoginUserDto
 - [x] JWT bearer token authentication middleware configured in Program.cs
 - [x] TokenValidationParameters (key, issuer, audience, lifetime) properly configured
-- [ ] Add [Authorize] attributes to protected endpoints (Folder/File controllers)
-- [ ] Extract user context (UserId) from JWT claims in Folder/File handlers
+- [x] Add [Authorize] attributes to protected endpoints (Folder/File controllers)
+- [x] Extract user context (UserId) from JWT claims in File/Folder handlers
+- [x] **Bug fixed**: `Jwt:Key`/`Jwt:Secret` config mismatch resolved - `JwtTokenService` and Program.cs both read `Jwt:Secret`, with a clear error if missing; set via `Jwt__Secret` env var (docker-compose) or user secrets locally
 
 **Controllers**:
-- [x] UserController - Fully wired with Register & Login endpoints dispatching CQRS commands
-  - [x] POST /api/users/register - Dispatches RegisterUserCommand, returns RegisterUserDto
-  - [x] POST /api/users/login - Dispatches LoginUserCommand, returns LoginUserDto with JWT token
-  - [ ] POST /api/users/update-password - Scaffolded, pending UpdateUserCommand
-  - [ ] POST /api/users/update-email - Scaffolded, pending UpdateUserCommand
-  - [ ] POST /api/users/update-username - Scaffolded, pending UpdateUserCommand
-  - [ ] POST /api/users/confirm-email - Scaffolded, pending implementation
-  - [ ] DELETE /api/users/{id} - Scaffolded, pending DeleteUserCommand
-- [ ] FolderController - Stubbed with HTTP routes (awaiting JWT auth & CQRS integration)
-- [ ] FileController - Stubbed with HTTP routes (awaiting JWT auth & CQRS integration)
+- [x] UserController - Fully wired except Logout/GetUser (Phase 2)
+  - [x] POST /api/User/register - RegisterUserCommand, returns UserAuthDto
+  - [x] POST /api/User/login - LoginUserCommand, returns UserAuthDto with JWT token
+  - [x] POST /api/User/update-password - UpdatePasswordCommand
+  - [x] POST /api/User/update-email - UpdateUserEmailCommand, returns new UserAuthDto (reissued token)
+  - [x] POST /api/User/update-username - UpdateUsernameCommand, returns new UserAuthDto (reissued token)
+  - [x] POST /api/User/confirm-email - ConfirmEmailCommand (sets EmailConfirmed, no token verification yet)
+  - [x] DELETE /api/User/{id} - DeleteUserCommand (soft delete, self-only via JWT userId check)
+  - [ ] POST /api/User/logout - Phase 2 (NotFound stub)
+  - [ ] GET /api/User/{id} - Phase 2, profile view (NotFound stub)
+- [x] FolderController - Fully wired (Create, GetById, GetAll, Subfolders, Search, RecycleBin, UpdateName, Move, Delete); Create defaults to the user's root folder as parent when none specified
+- [x] FileController - Fully wired (Create via multipart upload, Get/Download (streams file), GetAll, GetAllInFolder, Update name/description, Move, Delete, Search, RecycleBin, Update content via PUT)
 
-**FoldersController Endpoints**:
-- [ ] POST /api/folders - Create folder (wire to CreateFolderCommand)
-- [ ] GET /api/folders/{id} - Get folder by ID (wire to GetFolderByIdQuery)
-- [ ] PUT /api/folders/{id} - Update folder (wire to UpdateFolderCommand)
-- [ ] DELETE /api/folders/{id} - Delete folder (wire to DeleteFolderCommand)
-- [ ] GET /api/folders?parentId={id} - Get folders by parent (wire to GetFoldersByParentQuery)
-- [ ] GET /api/folders - Get all folders (wire to GetAllFoldersQuery)
+**FolderController Endpoints** (`api/Folder`): ✅ all wired
+- [x] POST /api/Folder - Create folder (CreateFolderCommand)
+- [x] GET /api/Folder/{folderId} - Get folder by ID (GetFolderQuery)
+- [x] PATCH /api/Folder/{folderId}/Name - Rename folder (UpdateFolderNameCommand)
+- [x] PATCH /api/Folder/{folderId}/Move - Move folder (MoveFolderCommand)
+- [x] DELETE /api/Folder/{folderId} - Delete folder (DeleteFolderCommand)
+- [x] GET /api/Folder/Subfolders/{folderId} - Get subfolders (GetFolderSubFoldersQuery)
+- [x] GET /api/Folder/SearchFolderByName/{searchTerm} - Search folders by name (SearchFolderByNameQuery)
+- [x] GET /api/Folder/RecycleBin - Get folders in recycle bin (GetFoldersInRecycleBinQuery)
+- [x] GET /api/Folder/AllFolders - Get all folders (GetAllFoldersQuery)
 
-**FilesController Endpoints**:
-- [ ] POST /api/files - Upload file (wire to CreateFileCommand)
-- [ ] GET /api/files/{id} - Get file metadata (wire to GetFileByIdQuery)
-- [ ] PUT /api/files/{id} - Update file metadata (wire to UpdateFileCommand)
-- [ ] DELETE /api/files/{id} - Delete file (wire to DeleteFileCommand)
-- [ ] GET /api/files/{id}/download - Download file (wire to DownloadFileQuery)
-- [ ] GET /api/files?folderId={id} - Get files by folder (wire to GetFilesByFolderQuery)
-- [ ] GET /api/files - Get all files (wire to GetAllFilesQuery)
+**FileController Endpoints** (`api/File`):
+- [x] POST /api/File - Upload file (CreateFileCommand, multipart/form-data via SaveFileRequest)
+- [x] GET /api/File/{fileId} - Get file metadata and stream file content (GetFileByIdQuery, doubles as download endpoint)
+- [x] GET /api/File/Allfiles - Get all files (GetAllFilesQuery)
+- [x] GET /api/File/Allfolders - Get all folders (GetAllFoldersQuery, convenience for file UI)
+- [x] GET /api/File/AllFilesInFolder/{folderId} - Files in a folder (GetAllFilesInFolderQuery)
+- [x] GET /api/File/AllFilesInRecycleBin - Files in recycle bin (GetAllFilesInRecycleBinQuery)
+- [x] GET /api/File/SearchFileByName/{searchTerm} - Search files (SearchFileByNameQuery)
+- [x] PATCH /api/File/MoveFile - Move file (MoveFileCommand)
+- [x] PATCH /api/File/UpdateFileDescription - Update description (UpdateFileDescriptionCommand)
+- [x] PATCH /api/File/UpdateFileName - Rename file (UpdateFileNameCommand)
+- [x] DELETE /api/File/{fileId} - Delete file (DeleteFileCommand)
+- [x] PUT /api/File - Update file content (UpdateFileContentCommand, retains version history), via SaveFileRequest (multipart/form-data) with FileId
 
 ### Testing & Validation
 - [x] XUnit test project (Sentinal.Tests) created
@@ -116,9 +136,9 @@
 - [ ] (Future: Load testing and performance benchmarks)
 
 ### Deployment & CI/CD
-- [ ] Dockerfile for containerization
-- [ ] Docker Compose for local development (API + PostgreSQL)
-- [x] Environment configuration (appsettings.json, appsettings.Development.json, launchSettings.json)
+- [x] Dockerfile for containerization (multi-stage: .NET 10 SDK build -> aspnet runtime)
+- [x] Docker Compose for local development (API + PostgreSQL, named volumes for db data and file storage, `.env`-driven config)
+- [x] Environment configuration (appsettings.json, appsettings.Development.json, launchSettings.json, `.env`/`.env.example` for Docker)
 - [ ] CI/CD pipeline setup (Gitea runners: build, test, publish)
 - [ ] Automated Docker image creation and publishing
 - [ ] GitHub replication setup (backup remote)
@@ -179,6 +199,6 @@
 
 ---
 
-**Last Updated**: 2026-06-11
-**Current Phase**: Phase 1 - Groundwork & Framework (90% complete)
-**Status**: Domain, Infrastructure, DI, User CQRS, JWT authentication fully complete. User and Folder CQRS commands/queries/handlers complete with unified UserAuthDto and full FolderRepository implementation. Registration now returns auth token for immediate login. Next: Wire FolderController endpoints to handlers, File CQRS implementation, and controller authorization integration.
+**Last Updated**: 2026-06-15
+**Current Phase**: Phase 1 - Groundwork & Framework (~98% complete)
+**Status**: Domain, Infrastructure, DI, User CQRS, JWT authentication, Folder CQRS, and File CQRS/repository all complete. FileController and FolderController fully wired, including file content update (PUT) and file download (via GET, streaming). Jwt:Key/Jwt:Secret config mismatch fixed. File storage redesigned to flat per-user layout (`/{userId}/{fileId}`) with folder hierarchy purely virtual/DB-driven. EF Core migrations created and applied automatically on startup. Docker/Docker Compose set up for local dev (Postgres + API, env-configurable storage provider). Remaining: S3 storage implementation, soft-delete cleanup job, unit/integration tests, health check endpoint, CI/CD.

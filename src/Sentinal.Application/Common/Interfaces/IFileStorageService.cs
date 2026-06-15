@@ -4,43 +4,32 @@ namespace Sentinal.Application.Common.Interfaces;
 
 /// <summary>
 /// Abstraction for file storage operations across multiple storage providers.
-/// Files are stored in a structure: /{userId}/{folderId}/{fileId}
-/// This approach prevents naming conflicts and ensures security through GUID-based paths.
+/// Storage is flat per-user: /{userId}/{fileId}. Folder hierarchy is virtual and lives only in the database.
 /// </summary>
 public interface IFileStorageService
 {
     /// <summary>
     /// Saves a file to the configured storage provider.
     /// </summary>
-    Task<bool> SaveFileAsync(Guid userId, Guid folderId, Guid fileId, Stream fileContent);
+    Task<bool> SaveFileAsync(Guid userId, Guid fileId, Stream fileContent);
 
     /// <summary>
     /// Checks if a file exists in storage.
     /// </summary>
-    Task<bool> FileExistsAsync(Guid userId, Guid folderId, Guid fileId);
+    Task<bool> FileExistsAsync(Guid userId, Guid fileId);
 
     /// <summary>
     /// Retrieves a file from storage as a stream.
     /// </summary>
     Task<Stream> GetFileAsync(Guid userId, Guid fileId);
-    
+
     /// <summary>
-    /// Creates a new folder
-    /// </summary>
-    Task<bool> CreateFolderAsync(Guid userId, Guid folderId);
-    
-    /// <summary>
-    /// Creates a new root folder when a user first signs up, their root folder id is their userId
+    /// Creates a user's root storage location when they first sign up.
     /// </summary>
     Task<bool> CreateRootFolderAsync(Guid userId);
-    
-    /// <summary>
-    /// Moves a file to a different folder.
-    /// </summary>
-    Task<bool> MoveFileAsync(Guid userId, Guid sourceFolderId, Guid destinationFolderId, Guid fileId);
 
     /// <summary>
     /// Deletes a file from storage.
     /// </summary>
-    Task<bool> DeleteFileAsync(Guid userId, Guid folderId, Guid fileId);
+    Task<bool> DeleteFileAsync(Guid userId, Guid fileId);
 }

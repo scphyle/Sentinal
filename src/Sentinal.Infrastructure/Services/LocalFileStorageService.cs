@@ -12,38 +12,45 @@ public class LocalFileStorageService : IFileStorageService
         _config = config.Value;
     }
 
-    public Task<bool> SaveFileAsync(Guid userId, Guid folderId, Guid fileId, Stream fileContent)
+    private string GetUserPath(Guid userId) => Path.Combine(_config.BasePath, userId.ToString());
+
+    private string GetFilePath(Guid userId, Guid fileId) => Path.Combine(GetUserPath(userId), fileId.ToString());
+
+    public async Task<bool> SaveFileAsync(Guid userId, Guid fileId, Stream fileContent)
     {
-        throw new NotImplementedException();
+        Directory.CreateDirectory(GetUserPath(userId));
+
+        await using var fileStream = new FileStream(GetFilePath(userId, fileId), FileMode.Create, FileAccess.Write);
+        await fileContent.CopyToAsync(fileStream);
+        return true;
     }
 
-    public Task<bool> FileExistsAsync(Guid userId, Guid folderId, Guid fileId)
+    public Task<bool> FileExistsAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(File.Exists(GetFilePath(userId, fileId)));
     }
 
     public Task<Stream> GetFileAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
-    }
+        var path = GetFilePath(userId, fileId);
+        if (!File.Exists(path))
+            throw new FileNotFoundException("File not found in storage", path);
 
-    public Task<bool> CreateFolderAsync(Guid userId, Guid folderId)
-    {
-        throw new NotImplementedException();
+        Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+        return Task.FromResult(stream);
     }
 
     public Task<bool> CreateRootFolderAsync(Guid userId)
     {
-        throw new NotImplementedException();
+        Directory.CreateDirectory(GetUserPath(userId));
+        return Task.FromResult(true);
     }
 
-    public Task<bool> MoveFileAsync(Guid userId, Guid sourceFolderId, Guid destinationFolderId, Guid fileId)
+    public Task<bool> DeleteFileAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> DeleteFileAsync(Guid userId, Guid folderId, Guid fileId)
-    {
-        throw new NotImplementedException();
+        var path = GetFilePath(userId, fileId);
+        if (File.Exists(path))
+            File.Delete(path);
+        return Task.FromResult(true);
     }
 }

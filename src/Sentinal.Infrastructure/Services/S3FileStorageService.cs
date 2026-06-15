@@ -12,12 +12,12 @@ public class S3FileStorageService : IFileStorageService
         _config = config.Value;
     }
 
-    public Task<bool> SaveFileAsync(Guid userId, Guid folderId, Guid fileId, Stream fileContent)
+    public Task<bool> SaveFileAsync(Guid userId, Guid fileId, Stream fileContent)
     {
         throw new NotImplementedException();
     }
 
-    public Task<bool> FileExistsAsync(Guid userId, Guid folderId, Guid fileId)
+    public Task<bool> FileExistsAsync(Guid userId, Guid fileId)
     {
         throw new NotImplementedException();
     }
@@ -27,22 +27,12 @@ public class S3FileStorageService : IFileStorageService
         throw new NotImplementedException();
     }
 
-    public Task<bool> CreateFolderAsync(Guid userId, Guid folderId)
-    {
-        throw new NotImplementedException();
-    }
-
     public Task<bool> CreateRootFolderAsync(Guid userId)
     {
         throw new NotImplementedException();
     }
 
-    public Task<bool> MoveFileAsync(Guid userId, Guid sourceFolderId, Guid destinationFolderId, Guid fileId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> DeleteFileAsync(Guid userId, Guid folderId, Guid fileId)
+    public Task<bool> DeleteFileAsync(Guid userId, Guid fileId)
     {
         throw new NotImplementedException();
     }

@@ -29,7 +29,7 @@ public class SearchFileByNameQueryHandler : IRequestHandler<SearchFileByNameQuer
             var foundFiles = await _fileRepository.SearchFilesByNameAsync(request.FileName, request.UserId);
             if (foundFiles.Count == 0)
                 return Result.Fail("No Files Found");
-            return Result.Ok(foundFiles.Select(x => new FileDataDto(x.FolderId,
+            return Result.Ok(foundFiles.Select(x => new FileDataDto(x.Id,
                 x.FileName,
                 x.ContentType,
                 x.Description,

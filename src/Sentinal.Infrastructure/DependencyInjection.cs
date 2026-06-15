@@ -26,6 +26,8 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
         });
 
+        services.Configure<FileStorageOptions>(configuration.GetSection("FileStorage"));
+    
         services.AddScoped<IFileRepository, FileRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
@@ -39,7 +41,11 @@ public static class DependencyInjection
             {
                 StorageType.Local => new LocalFileStorageService(config),
                 StorageType.AwsS3 => new S3FileStorageService(config),
-                StorageType.AzureBlob => new AzureBlobFileStorageService(config),
+                StorageType.AzureBlob => new AzureBlobFileStorageService(Microsoft.Extensions.Options.Options.Create(new AzureBlobStorageOptions
+                {
+                    ConnectionString = config.Value.AzureConnectionString,
+                    ContainerName = config.Value.AzureContainerName
+                })),
                 _ => throw new InvalidOperationException("Invalid storage type")
             };
         });

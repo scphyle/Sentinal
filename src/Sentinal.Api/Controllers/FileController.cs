@@ -11,6 +11,7 @@ using Sentinal.Application.FIles.GetFile;
 using Sentinal.Application.FIles.GetFilesInRecycleBin;
 using Sentinal.Application.Files.Move;
 using Sentinal.Application.FIles.SearchFileByName;
+using Sentinal.Application.Files.UpdateFileContent;
 using Sentinal.Application.FIles.UpdateFileDescription;
 using Sentinal.Application.FIles.UpdateFileName;
 using Sentinal.Application.Folders.GetAllFolders;
@@ -39,9 +40,15 @@ public class FileController : ControllerBase
 
         var query = new GetFileByIdQuery(fileId, userId);
         var commandResult = await _mediator.Send(query, ct);
-        if (commandResult.IsSuccess)
-            return Ok(commandResult.Value);
-        return BadRequest(commandResult.Errors);
+        if (commandResult.IsFailed)
+            return BadRequest(commandResult.Errors);
+
+        var fileContent = commandResult.Value;
+        return File(
+            fileContent.FileStream,
+            fileContent.ContentType,
+            fileContent.FileName
+        );
     }
 
     [HttpGet("Allfiles")]
@@ -105,20 +112,20 @@ public class FileController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> SaveFile([FromBody] CreateFileRequest createFileRequest, CancellationToken ct)
+    public async Task<IActionResult> SaveFile([FromForm] SaveFileRequest saveFileRequest, CancellationToken ct)
     {
         Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
 
-        if (createFileRequest.FolderId == Guid.Empty)
-            createFileRequest.FolderId = userId;
+        if (saveFileRequest.FolderId == Guid.Empty)
+            saveFileRequest.FolderId = userId;
 
-        var query = new CreateFileCommand(createFileRequest.FileName,
-            createFileRequest.ContentType,
-            createFileRequest.File.OpenReadStream(),
-            createFileRequest.File.Length,
+        var query = new CreateFileCommand(saveFileRequest.FileName,
+            saveFileRequest.ContentType,
+            saveFileRequest.File.OpenReadStream(),
+            saveFileRequest.File.Length,
             userId,
-            createFileRequest.FolderId,
-            createFileRequest.Description);
+            saveFileRequest.FolderId,
+            saveFileRequest.Description);
         var commandResult = await _mediator.Send(query, ct);
         if (commandResult.IsSuccess)
             return Ok(commandResult.Value);
@@ -175,11 +182,22 @@ public class FileController : ControllerBase
     }
 
     [HttpPut]
-    public async Task<IActionResult> UpdateFile([FromBody] UpdateFileDataRequest updateFileDataRequest, 
+    public async Task<IActionResult> UpdateFile([FromForm] SaveFileRequest updateFileDataRequest,
         CancellationToken ct)
     {
-        //TODO: Implment the Update of the file content (maybe should implment file history?)
-        return BadRequest("Not implemented");
+        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        
+        var command = new UpdateFileContentCommand(
+            updateFileDataRequest.FileId ?? throw new ArgumentNullException(nameof(updateFileDataRequest.FileId)),
+            updateFileDataRequest.File.OpenReadStream(),
+            updateFileDataRequest.File.Length,
+            userId,
+            updateFileDataRequest.Description);
+        var commandResult = await _mediator.Send(command, ct);
+        if (commandResult.IsSuccess)
+            return Ok(commandResult.Value);
+        return BadRequest(commandResult.Errors);
+        
     }
 
 [HttpDelete("{fileId:guid}")]

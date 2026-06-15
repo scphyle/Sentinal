@@ -2,8 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Sentinal.Api.Models.Files;
 
-public class CreateFileRequest()
+public class SaveFileRequest()
 {
+    public Guid? FileId { get; set; } //only used in the update file content path
     [Required]
     [MaxLength(1000)]
     public required string FileName { get; set; }

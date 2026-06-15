@@ -26,9 +26,8 @@ public class UpdateFileContentCommandHandler : IRequestHandler<UpdateFileContent
     {
         try
         {
-            var (newFile, oldFile) = await _fileRepository.UpdateFileContentAsync(request.FileId, request.UserId,request.FileSize, request.Description);
-            await _fileStorageService.MoveFileAsync(request.UserId, newFile.FolderId, oldFile.FolderId, oldFile.Id);
-            await _fileStorageService.SaveFileAsync(request.UserId, newFile.FolderId, newFile.Id, request.Stream);
+            var (newFile, _) = await _fileRepository.UpdateFileContentAsync(request.FileId, request.UserId,request.FileSize, request.Description);
+            await _fileStorageService.SaveFileAsync(request.UserId, newFile.Id, request.Stream);
             return Result.Ok(newFile.Id);
             
         }

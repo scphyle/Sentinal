@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using Microsoft.Extensions.Options;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Infrastructure.Options;
@@ -6,44 +7,44 @@ namespace Sentinal.Infrastructure.Services;
 
 public class AzureBlobFileStorageService : IFileStorageService
 {
-    private readonly FileStorageOptions _config;
-    public AzureBlobFileStorageService(IOptions<FileStorageOptions> config)
+    private readonly BlobContainerClient _containerClient;
+
+    public AzureBlobFileStorageService(IOptions<AzureBlobStorageOptions> options)
     {
-        _config = config.Value;
+        var blobServiceClient = new BlobServiceClient(options.Value.ConnectionString);
+        _containerClient = blobServiceClient.GetBlobContainerClient(options.Value.ContainerName);
     }
 
-    public Task<bool> SaveFileAsync(Guid userId, Guid folderId, Guid fileId, Stream fileContent)
+    public async Task<bool> SaveFileAsync(Guid userId, Guid fileId, Stream fileContent)
     {
-        throw new NotImplementedException();
+        var blobName = $"{userId}/{fileId}";
+        await _containerClient.GetBlobClient(blobName).UploadAsync(fileContent, overwrite: true);
+        return true;
     }
 
-    public Task<bool> FileExistsAsync(Guid userId, Guid folderId, Guid fileId)
+    public async Task<Stream> GetFileAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
+        var blobName = $"{userId}/{fileId}";
+        var download = await _containerClient.GetBlobClient(blobName).DownloadAsync();
+        return download.Value.Content;
     }
 
-    public Task<Stream> GetFileAsync(Guid userId, Guid fileId)
+    public async Task<bool> CreateRootFolderAsync(Guid userId)
     {
-        throw new NotImplementedException();
+        await _containerClient.CreateIfNotExistsAsync();
+        return true;
     }
 
-    public Task<bool> CreateFolderAsync(Guid userId, Guid folderId)
+    public async Task<bool> DeleteFileAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
+        var blobName = $"{userId}/{fileId}";
+        await _containerClient.GetBlobClient(blobName).DeleteAsync();
+        return true;
     }
 
-    public Task<bool> CreateRootFolderAsync(Guid userId)
+    public async Task<bool> FileExistsAsync(Guid userId, Guid fileId)
     {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> MoveFileAsync(Guid userId, Guid sourceFolderId, Guid destinationFolderId, Guid fileId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<bool> DeleteFileAsync(Guid userId, Guid folderId, Guid fileId)
-    {
-        throw new NotImplementedException();
+        var blobName = $"{userId}/{fileId}";
+        return await _containerClient.GetBlobClient(blobName).ExistsAsync();
     }
 }

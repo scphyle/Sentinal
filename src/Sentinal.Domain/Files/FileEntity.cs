@@ -15,7 +15,7 @@ public class FileEntity
     public DateTime UpdatedAt { get; set; }
     public bool MarkedForDeletion { get; set; }
     public DateTime? DeletedAt { get; set; }
-    public Guid PreviousVersionId { get; set; }
+    public Guid? PreviousVersionId { get; set; }
     public bool IsPartOfHistory { get; set; }
 
     // Navigation properties

@@ -120,9 +120,9 @@ public class FileRepository : IFileRepository
         var newFolder = await _folderRepository.GetFolderAsync(destinationFolderId, userId);
         if (newFolder == null)
             throw new InvalidOperationException("Destination folder not found");
-        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && 
+        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId &&
                                                                  x.UserId == userId &&
-                                                                 x.IsPartOfHistory);
+                                                                 !x.IsPartOfHistory);
         if (file == null)
             throw new InvalidOperationException("File not found");
         file.FolderId = destinationFolderId;
@@ -141,8 +141,7 @@ public class FileRepository : IFileRepository
         file.IsPartOfHistory = true;
         file.UpdatedAt = DateTime.UtcNow;
         file.FolderId = await _folderRepository.GetRecyclingFolderIdAsync(userId);
-        await  _context.Files.AddAsync(newFile);
-        
+
         newFile.PreviousVersionId = file.Id;
         if (description != null)
             newFile.Description = description;

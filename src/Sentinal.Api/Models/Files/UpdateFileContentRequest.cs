@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Sentinal.Api.Models.Files;
 
-public class UpdateFileContetRequest
+public class UpdateFileContentRequest
 {
     [Required]
     public Guid FileId { get; set; }
@@ -10,5 +10,5 @@ public class UpdateFileContetRequest
     [MaxLength(255)]
     public required string ContentType { get; set; }
     [Required]
-    public required MemoryStream Stream { get; set; } 
+    public required IFormFile Stream { get; set; } 
 }

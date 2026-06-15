@@ -1,7 +1,6 @@
 using FluentResults;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens.Experimental;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 
@@ -11,9 +10,9 @@ public class GetFileByIdQueryHandler : IRequestHandler<GetFileByIdQuery, Result<
 {
     private readonly IFileRepository _fileRepository;
     private readonly IFileStorageService _fileStorageService;
-    
-    private Logger<GetFileByIdQueryHandler> _logger;
-    public GetFileByIdQueryHandler(Logger<GetFileByIdQueryHandler> logger, IFileRepository fileRepository, IFileStorageService fileStorageService)
+
+    private readonly ILogger<GetFileByIdQueryHandler> _logger;
+    public GetFileByIdQueryHandler(ILogger<GetFileByIdQueryHandler> logger, IFileRepository fileRepository, IFileStorageService fileStorageService)
     {
         _logger = logger;
         _fileRepository = fileRepository;
@@ -28,10 +27,11 @@ public class GetFileByIdQueryHandler : IRequestHandler<GetFileByIdQuery, Result<
         try
         {
             var fileData = await _fileRepository.GetFileAsync(request.FileId, request.UserId);
-            var fileStream = await _fileStorageService.GetFileAsync(request.FileId, request.UserId);
-            if (fileStream.Length == 0)
-                return Result.Fail("File Not Found");
             if (fileData == null)
+                return Result.Fail("File Not Found");
+
+            var fileStream = await _fileStorageService.GetFileAsync(request.UserId, request.FileId);
+            if (fileStream.Length == 0)
                 return Result.Fail("File Not Found");
 
             return Result.Ok(new FileContentDto(fileData.FileName, fileData.ContentType, fileData.Id, fileStream));
@@ -39,8 +39,8 @@ public class GetFileByIdQueryHandler : IRequestHandler<GetFileByIdQuery, Result<
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error getting all files for {request.UserId}", ex);
-            return Result.Fail("Error getting all files");
+            _logger.LogError(ex, "Error getting file {FileId} for {UserId}", request.FileId, request.UserId);
+            return Result.Fail("Error getting file");
         }
     }
 }

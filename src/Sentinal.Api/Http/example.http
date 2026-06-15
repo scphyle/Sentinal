@@ -2,14 +2,178 @@
 @baseUrl = http://localhost:5230
 @contentType = application/json
 
-### Health Check - Get Weather Forecast
-GET {{baseUrl}}/weatherforecast
+### Create a new user
+POST {{baseUrl}}/api/User/register
+Content-Type: {{contentType}}
 Accept: {{contentType}}
 
-### Example POST - Add your tests below
-# POST {{baseUrl}}/api/folders
-# Content-Type: {{contentType}}
-#
-# {
-#   "name": "My Folder"
-# }
+{
+    "username":"chas",
+    "email":"scphyle@gmail.com",
+    "password":"8520123789"
+}
+
+
+### Login with that user
+# @name login
+POST {{baseUrl}}/api/User/login
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+
+{
+    "username":"chas",
+    "email":"scphyle@gmail.com",
+    "password":"8520123789"
+}
+
+> {%
+    client.log("token: " + response.body.token);
+    client.global.set("authToken", response.body.token);
+%}
+
+
+### Login with only username
+POST {{baseUrl}}/api/User/login
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+
+{
+    "username":"chas",
+    "password":"8520123789"
+}
+
+### Login with only email
+POST {{baseUrl}}/api/User/login
+Content-Type: {{contentType}}
+Accept: {{contentType}}
+
+{
+    "email":"scphyle@gmail.com",
+    "password":"8520123789"
+}
+
+### Upload a sample
+POST {{baseUrl}}/api/File
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=SentinalBoundary
+
+--SentinalBoundary
+Content-Disposition: form-data; name="FileName"
+
+test4.txt
+--SentinalBoundary
+Content-Disposition: form-data; name="ContentType"
+
+text/plain
+--SentinalBoundary
+Content-Disposition: form-data; name="Description"
+
+Test upload from example.http 
+--SentinalBoundary
+Content-Disposition: form-data; name="File"; filename="test4.txt"
+Content-Type: text/plain
+
+Hello from Sentinal! This is a test file.
+--SentinalBoundary--
+
+### Get all files
+GET {{baseUrl}}/api/File/Allfiles
+Authorization: Bearer {{authToken}}
+
+### Create a folder
+# @name createFolder
+POST {{baseUrl}}/api/Folder
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+    "name": "TestFolder"
+}
+
+> {%
+    client.log("folderId: " + response.body.id);
+    client.global.set("folderId", response.body.id);
+%}
+
+### Upload a file into the folder
+# @name uploadInFolder
+POST {{baseUrl}}/api/File
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=SentinalBoundary
+
+--SentinalBoundary
+Content-Disposition: form-data; name="FileName"
+
+folder-file1.txt
+--SentinalBoundary
+Content-Disposition: form-data; name="ContentType"
+
+text/plain
+--SentinalBoundary
+Content-Disposition: form-data; name="Description"
+
+First file in TestFolder
+--SentinalBoundary
+Content-Disposition: form-data; name="FolderId"
+
+019ec95b-d445-7c2e-aa65-58ca4772e7a2
+--SentinalBoundary
+Content-Disposition: form-data; name="File"; filename="folder-file1.txt"
+Content-Type: text/plain
+
+First file in the folder.
+--SentinalBoundary--
+
+### Get all files in the folder
+GET {{baseUrl}}/api/File/AllFilesInFolder/{{folderId}}
+Authorization: Bearer {{authToken}}
+
+### Create a second file in the folder
+# @name uploadInFolder2
+POST {{baseUrl}}/api/File
+Authorization: Bearer {{authToken}}
+Content-Type: multipart/form-data; boundary=SentinalBoundary
+
+--SentinalBoundary
+Content-Disposition: form-data; name="FileName"
+
+folder-file2.txt
+--SentinalBoundary
+Content-Disposition: form-data; name="ContentType"
+
+text/plain
+--SentinalBoundary
+Content-Disposition: form-data; name="Description"
+
+Second file in TestFolder
+--SentinalBoundary
+Content-Disposition: form-data; name="FolderId"
+
+{{folderId}}
+--SentinalBoundary
+Content-Disposition: form-data; name="File"; filename="folder-file2.txt"
+Content-Type: text/plain
+
+Second file in the folder.
+--SentinalBoundary--
+
+> {%
+    client.log("fileId2: " + response.body);
+    client.global.set("fileId2", response.body);
+%}
+
+### Get all files in the folder (should show 2)
+GET {{baseUrl}}/api/File/AllFilesInFolder/{{folderId}}
+Authorization: Bearer {{authToken}}
+
+### Delete the second file
+DELETE {{baseUrl}}/api/File/{{fileId2}}
+Authorization: Bearer {{authToken}}
+
+### Show the recycle bin (should contain the deleted file)
+GET {{baseUrl}}/api/File/AllFilesInRecycleBin
+Authorization: Bearer {{authToken}}
+
+### List all folders
+GET {{baseUrl}}/api/Folder/AllFolders
+Authorization: Bearer {{authToken}}
