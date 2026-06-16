@@ -47,12 +47,9 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// Configure HTTP pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.MapOpenApi();
+app.MapScalarApiReference();
+
 
 app.UseHttpsRedirection();
 

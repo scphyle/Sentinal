@@ -38,6 +38,8 @@ export interface FolderMetadata {
 }
 
 class ApiClient {
+  private onUnauthorized: (() => void) | null = null;
+
   private getAuthToken(): string | null {
     return localStorage.getItem('authToken');
   }
@@ -47,6 +49,21 @@ class ApiClient {
     return {
       'Authorization': token ? `Bearer ${token}` : '',
     };
+  }
+
+  setUnauthorizedHandler(handler: () => void): void {
+    this.onUnauthorized = handler;
+  }
+
+  private handleUnauthorized(): void {
+    this.logout();
+    this.onUnauthorized?.();
+  }
+
+  private async checkAuthStatus(response: Response): Promise<void> {
+    if (response.status === 401) {
+      this.handleUnauthorized();
+    }
   }
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
@@ -123,6 +140,8 @@ class ApiClient {
       body: formData,
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`File upload failed: ${response.statusText}`);
     }
@@ -139,6 +158,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       try {
@@ -164,6 +185,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       const error = await response.json();
@@ -193,6 +216,8 @@ class ApiClient {
       body: JSON.stringify(payload),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to create folder: ${response.statusText}`);
     }
@@ -205,6 +230,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch folder: ${response.statusText}`);
@@ -219,6 +246,8 @@ class ApiClient {
       headers: this.getAuthHeader() as HeadersInit,
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to download file: ${response.statusText}`);
     }
@@ -231,6 +260,8 @@ class ApiClient {
       method: 'DELETE',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to delete file: ${response.statusText}`);
@@ -247,6 +278,8 @@ class ApiClient {
       body: JSON.stringify({ fileId, newName: newFileName }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to update file name: ${response.statusText}`);
     }
@@ -260,6 +293,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       try {
@@ -286,6 +321,8 @@ class ApiClient {
       headers: this.getAuthHeader() as HeadersInit,
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       const error = await response.json();
       if (Array.isArray(error) && error[0]?.message === 'No Files found') {
@@ -307,6 +344,8 @@ class ApiClient {
       body: JSON.stringify({ fileId, newDescription }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to update file description: ${response.statusText}`);
     }
@@ -323,6 +362,8 @@ class ApiClient {
       } as HeadersInit,
       body: JSON.stringify({ fileId, destinationFolderId }),
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to move file: ${response.statusText}`);
@@ -345,6 +386,8 @@ class ApiClient {
       body: formData,
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to update file content: ${response.statusText}`);
     }
@@ -357,6 +400,8 @@ class ApiClient {
       method: 'DELETE',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to delete folder: ${response.statusText}`);
@@ -375,6 +420,8 @@ class ApiClient {
       body: JSON.stringify({ newName }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to rename folder: ${response.statusText}`);
     }
@@ -392,6 +439,8 @@ class ApiClient {
       body: JSON.stringify({ destinationParentFolderId }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to move folder: ${response.statusText}`);
     }
@@ -404,6 +453,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
        try {
@@ -430,6 +481,8 @@ class ApiClient {
       headers: this.getAuthHeader() as HeadersInit,
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to fetch recycle bin folder: ${response.statusText}`);
     }
@@ -442,6 +495,8 @@ class ApiClient {
       method: 'GET',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       const error = await response.json();
@@ -464,6 +519,8 @@ class ApiClient {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to update password: ${response.statusText}`);
     }
@@ -480,6 +537,8 @@ class ApiClient {
       } as HeadersInit,
       body: JSON.stringify({ newEmail }),
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to update email: ${response.statusText}`);
@@ -500,6 +559,8 @@ class ApiClient {
       body: JSON.stringify({ newUsername }),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to update username: ${response.statusText}`);
     }
@@ -516,6 +577,8 @@ class ApiClient {
       body: JSON.stringify({}),
     });
 
+    await this.checkAuthStatus(response);
+
     if (!response.ok) {
       throw new Error(`Failed to confirm email: ${response.statusText}`);
     }
@@ -528,6 +591,8 @@ class ApiClient {
       method: 'DELETE',
       headers: this.getAuthHeader() as HeadersInit,
     });
+
+    await this.checkAuthStatus(response);
 
     if (!response.ok) {
       throw new Error(`Failed to delete user: ${response.statusText}`);
