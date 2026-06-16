@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sentinal.Api.Extensions;
 using Sentinal.Api.Models.Folders;
 using Sentinal.Application.Folders.Create;
 using Sentinal.Application.Folders.Delete;
@@ -30,7 +30,7 @@ public class FolderController : ControllerBase
     [HttpGet("{folderId:guid}")]
     public async Task<IActionResult> GetById(Guid folderId, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var query = new GetFolderQuery(folderId, userId);
         var result = await _mediator.Send(query, ct);
@@ -42,7 +42,7 @@ public class FolderController : ControllerBase
     [HttpGet("AllFolders")]
     public async Task<IActionResult> GetAllFolders(CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var query = new GetAllFoldersQuery(userId);
         var result = await _mediator.Send(query, ct);
@@ -54,7 +54,7 @@ public class FolderController : ControllerBase
     [HttpGet("Subfolders/{folderId:guid}")]
     public async Task<IActionResult> GetSubfolders(Guid folderId, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var query = new GetFolderSubFoldersQuery(folderId, userId);
         var result = await _mediator.Send(query, ct);
@@ -66,7 +66,7 @@ public class FolderController : ControllerBase
     [HttpGet("RecycleBin")]
     public async Task<IActionResult> GetRecycleBin(CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var query = new GetFoldersInRecycleBinQuery(userId);
         var result = await _mediator.Send(query, ct);
@@ -78,7 +78,7 @@ public class FolderController : ControllerBase
     [HttpGet("SearchFolderByName/{searchTerm}")]
     public async Task<IActionResult> SearchFolderByName(string searchTerm, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var query = new SearchFolderByNameQuery(searchTerm, userId);
         var result = await _mediator.Send(query, ct);
@@ -90,9 +90,9 @@ public class FolderController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateFolder([FromBody] CreateFolderRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
-        var command = new CreateFolderCommand(request.Name, userId, request.ParentId);
+        var command = new CreateFolderCommand(request.FolderName, userId, request.ParentId);
         var result = await _mediator.Send(command, ct);
         if (result.IsSuccess)
             return Ok(result.Value);
@@ -102,7 +102,7 @@ public class FolderController : ControllerBase
     [HttpPatch("{folderId:guid}/Name")]
     public async Task<IActionResult> UpdateFolderName(Guid folderId, [FromBody] UpdateFolderNameRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new UpdateFolderNameCommand(folderId, request.NewName, userId);
         var result = await _mediator.Send(command, ct);
@@ -114,7 +114,7 @@ public class FolderController : ControllerBase
     [HttpPatch("{folderId:guid}/Move")]
     public async Task<IActionResult> MoveFolder(Guid folderId, [FromBody] MoveFolderRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new MoveFolderCommand(folderId, request.DestinationFolderId, userId);
         var result = await _mediator.Send(command, ct);
@@ -126,7 +126,7 @@ public class FolderController : ControllerBase
     [HttpDelete("{folderId:guid}")]
     public async Task<IActionResult> DeleteFolder(Guid folderId, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new DeleteFolderCommand(folderId, userId);
         var result = await _mediator.Send(command, ct);

@@ -38,9 +38,7 @@ public class GetFolderQueryHandler : IRequestHandler<GetFolderQuery, Result<Fold
                 folder.FolderName,
                 folder.ParentFolderId,
                 folder.CreatedAt,
-                folder.UpdatedAt,
-                folder.Children,
-                folder.Files));
+                folder.UpdatedAt));
         }
         catch (Exception e)
         {

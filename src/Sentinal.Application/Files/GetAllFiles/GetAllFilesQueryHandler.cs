@@ -5,7 +5,7 @@ using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 using Sentinal.Domain.Files;
 
-namespace Sentinal.Application.FIles.GetAllFiles;
+namespace Sentinal.Application.Files.GetAllFiles;
 
 
 public class GetAllFilesQueryHandler : IRequestHandler<GetAllFilesQuery, Result<List<FileDataDto>>>

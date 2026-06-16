@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Infrastructure.Common.Persistence;
+using Sentinal.Infrastructure.Common.Policies;
 using Sentinal.Infrastructure.Common.Security;
 using Sentinal.Infrastructure.Files.Persistence;
 using Sentinal.Infrastructure.Folders.Persistence;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPasswordHasher, Argon2PasswordService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IRegistrationPolicy, RegistrationPolicy>();
 
         services.AddScoped<IFileStorageService>(provider =>
         {

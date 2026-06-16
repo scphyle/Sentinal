@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 
-namespace Sentinal.Application.FIles.GetFilesInRecycleBin;
+namespace Sentinal.Application.Files.GetFilesInRecycleBin;
 
 public class GetAllFilesInRecyclebinQueryHandler : IRequestHandler<GetAllFilesInRecycleBinQuery, Result<List<FileDataDto>>>
 {

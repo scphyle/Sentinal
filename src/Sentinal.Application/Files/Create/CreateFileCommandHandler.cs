@@ -2,7 +2,7 @@ using FluentResults;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
-using Sentinal.Application.FIles.Create;
+using Sentinal.Application.Files.Create;
 
 namespace Sentinal.Application.Files.Create;
 

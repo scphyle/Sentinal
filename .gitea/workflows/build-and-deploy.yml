@@ -1,0 +1,173 @@
+name: Build and Deploy Sentinal
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        run: git clone --depth 1 --branch ${{ github.ref_name }} https://chas:${{ secrets.TOKEN_FOR_RUNNER }}@git.tazhome.net/chas/${{ secrets.REPOSITORY_GITEA }}.git .
+
+      - name: Install Dependencies
+        run: |
+          apk add --no-cache ca-certificates curl openssh-client docker-cli python3 nodejs npm dotnet-sdk-10.0
+
+      - name: Build React App
+        run: |
+          cd sentinal-ui
+          npm install
+          npm run build
+          cp -r dist/* ../src/Sentinal.Api/wwwroot/
+
+      - name: Run Tests
+        run: |
+          dotnet test --verbosity normal
+          if [ $? -ne 0 ]; then
+            echo "Tests failed! Aborting pipeline."
+            exit 1
+          fi
+
+      - name: Log in to Gitea Container Registry
+        run: docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_RUNNER }}
+
+      - name: Build Docker Image
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          docker build --no-cache -t ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest -t ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$COMMIT_SHA .
+
+      - name: Push Docker Image to Registry
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          docker push ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+          docker push ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$COMMIT_SHA
+
+      - name: Push to GitHub
+        run: |
+          git config --global credential.helper store
+          echo "https://chas:${{ secrets.TOKEN_FOR_GITHUB }}@github.com" > ~/.git-credentials
+          git remote add github https://github.com/${{ secrets.REPOSITORY_GITHUB }}.git
+          git push github main
+          git push github --tags
+        continue-on-error: true
+
+      - name: Deploy to Voyager (Docker Compose)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          
+          # Create docker-compose for deployment
+          cat > docker-compose.deploy.yml << 'COMPOSE'
+          version: '3.8'
+          services:
+            sentinal-db:
+              image: postgres:16-alpine
+              container_name: sentinal-db
+              restart: unless-stopped
+              environment:
+                POSTGRES_USER: sentinal
+                POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+                POSTGRES_DB: sentinal
+              volumes:
+                - sentinal-pgdata:/var/lib/postgresql/data
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U sentinal"]
+                interval: 5s
+                timeout: 5s
+                retries: 5
+          
+            sentinal-api:
+              image: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+              container_name: sentinal-api
+              restart: unless-stopped
+              depends_on:
+                sentinal-db:
+                  condition: service_healthy
+              environment:
+                ASPNETCORE_ENVIRONMENT: Production
+                ASPNETCORE_HTTP_PORTS: 8080
+                ConnectionStrings__DefaultConnection: "Host=sentinal-db;Port=5432;Database=sentinal;Username=sentinal;Password=${POSTGRES_PASSWORD}"
+                Jwt__Secret: ${JWT_SECRET}
+                Jwt__Issuer: Sentinal
+                Jwt__Audience: SentinalUsers
+                FileStorage__StorageProvider: Local
+                FileStorage__BasePath: /data/files
+              ports:
+                - "8080:8080"
+              volumes:
+                - sentinal-file-storage:/data/files
+              networks:
+                - sentinal-network
+          
+            sentinal-proxy:
+              image: nginx:alpine
+              container_name: sentinal-proxy
+              restart: unless-stopped
+              ports:
+                - "80:80"
+                - "443:443"
+              volumes:
+                - ./nginx.conf:/etc/nginx/nginx.conf:ro
+                - ./ssl:/etc/nginx/ssl:ro
+              depends_on:
+                - sentinal-api
+              networks:
+                - sentinal-network
+          
+          networks:
+            sentinal-network:
+              driver: bridge
+          
+          volumes:
+            sentinal-pgdata:
+            sentinal-file-storage:
+          COMPOSE
+          
+          # SCP the compose file to Voyager
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }}:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
+          
+          # Create .env file on Voyager
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          EOL'
+          
+          # Deploy
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
+            cd /home/${{ secrets.VOYAGER_USER }}/sentinal
+            docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_RUNNER }}
+            docker compose pull
+            docker compose down || true
+            docker compose up -d
+            docker logout ${{ secrets.DOCKER_REGISTRY }}
+          '
+          
+          rm /tmp/deploy_key
+
+      - name: Verify Deployment
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
+            if docker ps | grep sentinal-api > /dev/null; then
+              echo "✅ Sentinal API is running!"
+            else
+              echo "❌ Sentinal API failed to start"
+              exit 1
+            fi
+          '
+          
+          rm /tmp/deploy_key

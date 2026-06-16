@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 
-namespace Sentinal.Application.FIles.SearchFileByName;
+namespace Sentinal.Application.Files.SearchFileByName;
 
 public class SearchFileByNameQueryHandler : IRequestHandler<SearchFileByNameQuery, Result<List<FileDataDto>>>
 {
@@ -29,6 +29,7 @@ public class SearchFileByNameQueryHandler : IRequestHandler<SearchFileByNameQuer
             var foundFiles = await _fileRepository.SearchFilesByNameAsync(request.FileName, request.UserId);
             if (foundFiles.Count == 0)
                 return Result.Fail("No Files Found");
+            _logger.LogInformation("Found {Count} files with search term: {searchTerm}", foundFiles.Count, request.FileName);
             return Result.Ok(foundFiles.Select(x => new FileDataDto(x.Id,
                 x.FileName,
                 x.ContentType,

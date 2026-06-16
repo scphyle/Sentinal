@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 
-namespace Sentinal.Application.FIles.UpdateFileDescription;
+namespace Sentinal.Application.Files.UpdateFileDescription;
 
 public class UpdateFileDescriptionCommandHandler : IRequestHandler<UpdateFileDescriptionCommand, Result<bool>>
 {
@@ -31,7 +31,7 @@ public class UpdateFileDescriptionCommandHandler : IRequestHandler<UpdateFileDes
         }
         catch (Exception ex)
         { 
-            _logger.LogError(ex, "Error updating file description");
+            _logger.LogError(ex, "Error updating file description: {newFileDescription}", request.NewDescription);
             return Result.Fail("Failed to update file description");
         }
         

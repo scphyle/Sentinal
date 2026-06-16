@@ -19,5 +19,6 @@ public interface IFolderRepository
     Task<bool> CheckIfFolderExistsAsync(Guid id, Guid userId);
     Task<Guid> GetRecyclingFolderIdAsync(Guid userId);
     Task<Guid> GetHistoryFolderIdAsync(Guid userId);
+    Task<bool> DeleteFolderPermanentlyAsync(Guid folderId);
 
 }

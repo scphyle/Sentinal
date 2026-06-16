@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 
-namespace Sentinal.Application.FIles.GetFile;
+namespace Sentinal.Application.Files.GetFile;
 
 public class GetFileByIdQueryHandler : IRequestHandler<GetFileByIdQuery, Result<FileContentDto>>
 {

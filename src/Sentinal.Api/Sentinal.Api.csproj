@@ -25,6 +25,7 @@
 
     <ItemGroup>
       <Folder Include="Models\Users\Responses\" />
+      <Folder Include="wwwroot\" />
     </ItemGroup>
 
 </Project>

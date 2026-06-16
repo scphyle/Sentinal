@@ -9,14 +9,13 @@ using Sentinal.Infrastructure.Common.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
+// Add services
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
 builder.Services.AddApplication()
                 .AddInfrastructure(builder.Configuration);
+
+// Configure JWT authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -24,12 +23,13 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    var jwtSecret = builder.Configuration["Jwt:Secret"] ??
+                   throw new InvalidOperationException("Missing JWT secret in configuration");
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"] ?? 
-                                                                           throw new InvalidOperationException(
-                                                                               "Missing JWT secret"))),
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
         ValidateIssuer = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidateAudience = true,
@@ -38,17 +38,16 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
 var app = builder.Build();
 
-// Apply pending EF Core migrations on startup (first-time DB setup)
+// Apply EF Core migrations on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SentinalDbContext>();
     db.Database.Migrate();
 }
 
-// Configure the HTTP request pipeline.
+// Configure HTTP pipeline
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -57,10 +56,18 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Static files & React routing
+app.UseStaticFiles();
+app.UseRouting();
 
+// Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
+// API endpoints
 app.MapControllers();
+
+// Fallback to index.html for React Router (SPA)
+app.MapFallbackToFile("index.html");
 
 app.Run();

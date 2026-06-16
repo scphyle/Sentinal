@@ -104,7 +104,7 @@ public class FileRepository : IFileRepository
 
     public async Task<bool> MarkFileAsDeletedAsync(Guid fileId, Guid userId)
     {
-        var file = _context.Files.FirstOrDefault(x => x.Id == fileId && x.UserId == userId);
+        var file = await _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && x.UserId == userId);
         if (file == null)
             throw new InvalidOperationException("File not found");
         file.MarkedForDeletion = true;
@@ -136,7 +136,7 @@ public class FileRepository : IFileRepository
         var file = await  _context.Files.FirstOrDefaultAsync(x => x.Id == fileId && x.UserId == userId);
         if (file == null)
             throw new InvalidOperationException("File not found");
-        
+
         var newFile = file.Copy();
         file.IsPartOfHistory = true;
         file.UpdatedAt = DateTime.UtcNow;
@@ -147,10 +147,12 @@ public class FileRepository : IFileRepository
             newFile.Description = description;
         newFile.UpdatedAt = DateTime.UtcNow;
         newFile.FileSize = fileSize;
+
+        _context.Files.Update(file);
         await _context.Files.AddAsync(newFile);
         await _context.SaveChangesAsync();
         return (newFile,file);
-        
+
     }
     
     public async Task<bool> UpdateFileNameAsync(Guid id, string newName, Guid userId)

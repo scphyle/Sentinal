@@ -25,8 +25,20 @@ public class DeleteFileCommandHandler : IRequestHandler<DeleteFileCommand, Resul
 
         try
         {
-            var result = await _fileRepository.MarkFileAsDeletedAsync(request.FileId, request.UserId);
-            return result ? Result.Ok(true) : Result.Fail("File not found or user does not own this file");
+            var file = await _fileRepository.GetFileAsync(request.FileId, request.UserId);
+            if (file == null)
+                return Result.Fail("File not found or user does not own this file");
+
+            if (file.MarkedForDeletion)
+            {
+                _logger.LogInformation("Permanently deleting file {FileId}", request.FileId);
+                var result = await _fileRepository.PermanentlyDeleteFileAsync(request.FileId, request.UserId);
+                return result ? Result.Ok(true) : Result.Fail("Failed to permanently delete file");
+            }
+
+            _logger.LogInformation("Soft deleting file {FileId}", request.FileId);
+            var softDeleteResult = await _fileRepository.MarkFileAsDeletedAsync(request.FileId, request.UserId);
+            return softDeleteResult ? Result.Ok(true) : Result.Fail("File not found or user does not own this file");
         }
         catch (Exception ex)
         {

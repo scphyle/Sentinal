@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using FluentResults;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -18,8 +17,9 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
     private readonly IFileStorageService _fileStorageService;
     private readonly IFolderRepository _folderRespository;
     private readonly ILogger<RegisterUserCommandHandler> _logger;
+    private readonly IRegistrationPolicy _registrationPolicy;
 
-    public RegisterUserCommandHandler(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<RegisterUserCommandHandler> logger, IJwtTokenService jwtTokenService, IFileStorageService fileStorageService, IFolderRepository folderRespository)
+    public RegisterUserCommandHandler(IUserRepository userRepository, IPasswordHasher passwordHasher, ILogger<RegisterUserCommandHandler> logger, IJwtTokenService jwtTokenService, IFileStorageService fileStorageService, IFolderRepository folderRespository, IRegistrationPolicy registrationPolicy)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
@@ -27,10 +27,14 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
         _jwtTokenService = jwtTokenService;
         _fileStorageService = fileStorageService;
         _folderRespository = folderRespository;
+        _registrationPolicy = registrationPolicy;
     }
 
     public async Task<Result<UserAuthDto>> Handle(RegisterUserCommand command, CancellationToken cancellationToken)
     {
+        if (!_registrationPolicy.IsRegistrationEnabled())
+            return Result.Fail("User registration is currently disabled");
+
         if(string.IsNullOrWhiteSpace(command.Username) || string.IsNullOrWhiteSpace(command.Password) || string.IsNullOrWhiteSpace(command.Email))
             return Result.Fail("Username, password and email are required");
         if(command.Username.Length < 3 || command.Username.Length > 255)

@@ -28,14 +28,28 @@ public class DeleteFolderCommandHandler : IRequestHandler<DeleteFolderCommand, R
         if (folder == null)
             return Result.Fail("Folder not found or does not belong to you");
 
-        _logger.LogInformation("Deleting folder {FolderId}", command.FolderId);
+        if (folder.FolderType.HasValue && (folder.FolderType == Sentinal.Domain.Folders.SpecialFolderTypes.RecycleBin || folder.FolderType == Sentinal.Domain.Folders.SpecialFolderTypes.History))
+            return Result.Fail("Cannot delete special system folders");
 
         try
         {
-            var result = await _folderRepository.MarkFolderAsDeletedAsync(command.FolderId, command.UserId);
-            if (result)
+            if (folder.MarkedForDeletion)
             {
-                _logger.LogInformation("Folder deleted successfully: {FolderId}", command.FolderId);
+                _logger.LogInformation("Permanently deleting folder {FolderId}", command.FolderId);
+                var result = await _folderRepository.DeleteFolderPermanentlyAsync(command.FolderId);
+                if (result)
+                {
+                    _logger.LogInformation("Folder permanently deleted: {FolderId}", command.FolderId);
+                    return Result.Ok(new UpdateFolderDto(folder.Id, folder.FolderName));
+                }
+                return Result.Fail("Failed to permanently delete folder");
+            }
+
+            _logger.LogInformation("Soft deleting folder {FolderId}", command.FolderId);
+            var softDeleteResult = await _folderRepository.MarkFolderAsDeletedAsync(command.FolderId, command.UserId);
+            if (softDeleteResult)
+            {
+                _logger.LogInformation("Folder soft deleted: {FolderId}", command.FolderId);
                 return Result.Ok(new UpdateFolderDto(folder.Id, folder.FolderName));
             }
             return Result.Fail("Failed to delete folder");

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 using Sentinal.Application.Files.DTOs;
 
-namespace Sentinal.Application.FIles.GetAllFilesInAFolder;
+namespace Sentinal.Application.Files.GetAllFilesInAFolder;
 
 public class GetAllFilesInFolderQueryHandler : IRequestHandler<GetAllFilesInFolderQuery, Result<List<FileDataDto>>>
 {

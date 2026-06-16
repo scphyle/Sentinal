@@ -1,7 +1,7 @@
 using FluentResults;
 using MediatR;
 
-namespace Sentinal.Application.FIles.Create;
+namespace Sentinal.Application.Files.Create;
 
 public record CreateFileCommand(string Name,
     string ContentType,

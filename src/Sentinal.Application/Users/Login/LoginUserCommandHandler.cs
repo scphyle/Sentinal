@@ -36,7 +36,7 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, Result<
         {
             user = await _userRepository.GetUserByEmailAsync(loginRequest.Email);
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(loginRequest.Username))
         {
             user = await _userRepository.GetUserByUsernameAsync(loginRequest.Username);
         }

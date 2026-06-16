@@ -25,10 +25,10 @@ public class GetAllFoldersQueryHandler : IRequestHandler<GetAllFoldersQuery, Res
         try
         {
             var folders = await _folderRepository.GetAllFoldersAsync(query.UserId);
-            if (folders == null || folders.Count == 0)
+            if (folders.Count == 0)
             {
                 _logger.LogInformation("No folders found for user: {UserId}", query.UserId);
-                return Result.Ok(new List<FolderDto>());
+                return Result.Fail("Failed to retrieve folders");
             }
 
             var folderDtos = folders.Select(f => new FolderDto(f.Id, f.FolderName,f.ParentFolderId ,f.CreatedAt, f.UpdatedAt)).ToList();

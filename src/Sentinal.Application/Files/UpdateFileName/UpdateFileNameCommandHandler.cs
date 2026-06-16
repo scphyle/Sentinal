@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Sentinal.Application.Common.Interfaces;
 
-namespace Sentinal.Application.FIles.UpdateFileName;
+namespace Sentinal.Application.Files.UpdateFileName;
 
 public class UpdateFileNameCommandHandler : IRequestHandler<UpdateFileNameCommand, Result<bool>>
 {
@@ -27,12 +27,15 @@ public class UpdateFileNameCommandHandler : IRequestHandler<UpdateFileNameComman
 
         try
         {
-            return Result.Ok(await _fileRepository.UpdateFileNameAsync(request.FileId, request.NewFileName, request.UserId));
+            var success = await _fileRepository.UpdateFileNameAsync(request.FileId, request.NewFileName, request.UserId);
+            if (!success)
+                return Result.Fail("Failed to update file name");
+            return Result.Ok(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating file description: {newFileName}", request.NewFileName);
-            return Result.Fail("Error updating file description");
+            _logger.LogError(ex, "Error updating file name: {newFileName}", request.NewFileName);
+            return Result.Fail("Error updating file name");
         }
         
     }

@@ -35,8 +35,12 @@ public class MoveFolderCommandHandler : IRequestHandler<MoveFolderCommand, Resul
             var result = await _folderRepository.MoveFolderAsync(command.SourceFolderId, command.DestinationFolderId, command.UserId);
             if (result)
             {
-                _logger.LogInformation("Folder moved successfully: {SourceFolderId} to {DestinationFolderId}", command.SourceFolderId, command.DestinationFolderId);
-                return Result.Ok(new FolderDto(command.SourceFolderId, null,command.DestinationFolderId, null, null));
+                var folder = await _folderRepository.GetFolderAsync(command.SourceFolderId, command.UserId);
+                if (folder != null)
+                {
+                    _logger.LogInformation("Folder moved successfully: {SourceFolderId} to {DestinationFolderId}", command.SourceFolderId, command.DestinationFolderId);
+                    return Result.Ok(new FolderDto(folder.Id, folder.FolderName, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt));
+                }
             }
             return Result.Fail("Failed to move folder");
         }

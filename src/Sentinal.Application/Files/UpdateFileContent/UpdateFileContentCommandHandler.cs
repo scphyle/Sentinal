@@ -7,11 +7,11 @@ namespace Sentinal.Application.Files.UpdateFileContent;
 
 public class UpdateFileContentCommandHandler : IRequestHandler<UpdateFileContentCommand, Result<Guid>>
 {
-    private ILogger<UpdateFileContentCommandHandler> _logger;
+    private readonly ILogger<UpdateFileContentCommandHandler> _logger;
     private IFolderRepository _folderRepository;
-    private IFileRepository _fileRepository;
+    private readonly IFileRepository _fileRepository;
     private IUserRepository _userRepository;
-    private IFileStorageService _fileStorageService;
+    private readonly IFileStorageService _fileStorageService;
 
     public UpdateFileContentCommandHandler(IFolderRepository folderRepository, IFileRepository fileRepository, IUserRepository userRepository, IFileStorageService fileStorageService, ILogger<UpdateFileContentCommandHandler> logger)
     {
@@ -28,6 +28,7 @@ public class UpdateFileContentCommandHandler : IRequestHandler<UpdateFileContent
         {
             var (newFile, _) = await _fileRepository.UpdateFileContentAsync(request.FileId, request.UserId,request.FileSize, request.Description);
             await _fileStorageService.SaveFileAsync(request.UserId, newFile.Id, request.Stream);
+            _logger.LogInformation("File content updated: {FileId}", newFile.Id);
             return Result.Ok(newFile.Id);
             
         }

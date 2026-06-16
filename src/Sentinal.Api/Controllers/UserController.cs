@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sentinal.Api.Extensions;
 using Sentinal.Api.Models.Requests;
 using Sentinal.Application.Users.ConfirmEmail;
 using Sentinal.Application.Users.Delete;
@@ -69,7 +69,7 @@ public class UserController : ControllerBase
     [HttpPost("update-password")]
     public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new UpdatePasswordCommand(userId, request.CurrentPassword, request.NewPassword);
         var commandResult = await _mediator.Send(command, ct);
@@ -81,7 +81,7 @@ public class UserController : ControllerBase
     [HttpPost("update-email")]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateUserEmailRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new UpdateUserEmailCommand(userId, request.NewEmail);
         var commandResult = await _mediator.Send(command, ct);
@@ -93,7 +93,7 @@ public class UserController : ControllerBase
     [HttpPost("update-username")]
     public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameRequest request, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new UpdateUsernameCommand(userId, request.NewUsername);
         var commandResult = await _mediator.Send(command, ct);
@@ -105,7 +105,7 @@ public class UserController : ControllerBase
     [HttpPost("confirm-email")]
     public async Task<IActionResult> ConfirmEmail(CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
 
         var command = new ConfirmEmailCommand(userId);
         var commandResult = await _mediator.Send(command, ct);
@@ -117,7 +117,7 @@ public class UserController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken ct)
     {
-        Guid.TryParse(User.FindFirstValue("userId"), out Guid userId);
+        var userId = User.GetUserId();
         if (id != userId)
             return Forbid();
 

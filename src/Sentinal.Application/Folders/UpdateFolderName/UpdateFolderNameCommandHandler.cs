@@ -30,13 +30,16 @@ public class UpdateFolderNameCommandHandler : IRequestHandler<UpdateFolderNameCo
 
         try
         {
-
             _logger.LogInformation("Updating folder name. Folder Id: {FolderId}", command.FolderId);
             var result = await _folderRepository.UpdateFolderNameAsync(command.FolderId, command.NewName, command.UserId);
             if (result)
             {
-                _logger.LogInformation("Folder name updated successfully: {FolderId}", command.FolderId);
-                return Result.Ok(new FolderDto(command.FolderId, command.NewName, null, null, null));
+                var folder = await _folderRepository.GetFolderAsync(command.FolderId, command.UserId);
+                if (folder != null)
+                {
+                    _logger.LogInformation("Folder name updated successfully: {FolderId}", command.FolderId);
+                    return Result.Ok(new FolderDto(folder.Id, folder.FolderName, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt));
+                }
             }
             return Result.Fail("Failed to update folder name");
         }
