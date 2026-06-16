@@ -18,7 +18,7 @@ jobs:
         run: |
           cd sentinal-ui
           npm install
-          npm run build
+          VITE_API_URL=https://sentinal.tazhome.net/api npm run build
           cp -r dist/* ../src/Sentinal.Api/wwwroot/
 
       - name: Run Tests
@@ -47,25 +47,6 @@ jobs:
             --tag git.tazhome.net/chas/sentinal:$(git rev-parse --short HEAD) \
             --push \
             .
-
-      - name: Push to GitHub
-        run: |
-          rm -rf /tmp/sentinal-gh
-          git clone https://github.com/scphyle/Sentinal.git /tmp/sentinal-gh
-          cd /tmp/sentinal-gh
-          git config user.email "ci@tazhome.net"
-          git config user.name "Sentinal CI"
-          git remote set-url origin https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git
-          git fetch origin main
-          git checkout main
-          # Copy our files from current repo
-          cp -r ../src ../sentinal-ui ../docker-compose.yml ../README.md .
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Sync from Gitea ($(git rev-parse --short HEAD))"
-            git push origin main
-          fi
-        continue-on-error: true
 
       - name: Get changes since last tag
         id: changes
