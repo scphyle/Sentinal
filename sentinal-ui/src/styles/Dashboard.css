@@ -6,7 +6,7 @@
 .dashboard-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 1.5rem 2rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -15,7 +15,7 @@
 
 .dashboard-header h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.3rem;
 }
 
 .header-buttons {
@@ -990,4 +990,167 @@ section h2 {
   background-color: #667eea;
   color: white;
   border-color: #667eea;
+}
+
+.theme-toggle-button {
+  padding: 0.5rem 1rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.theme-toggle-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Dark Mode */
+[data-theme='dark'] {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-color: #444;
+  --header-bg: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+[data-theme='dark'] .dashboard-container {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .dashboard-header {
+  background: var(--header-bg);
+}
+
+[data-theme='dark'] section {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .items-table thead {
+  background-color: var(--bg-tertiary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='dark'] .items-table td,
+[data-theme='dark'] .items-table th {
+  border-bottom-color: var(--border-color);
+  color: #ffffff;
+}
+
+[data-theme='dark'] .items-table tbody tr:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme='dark'] .file-link,
+[data-theme='dark'] .folder-link {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .file-link:hover,
+[data-theme='dark'] .folder-link:hover {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .explorer-section h2 {
+  color: #ffffff;
+}
+
+[data-theme='dark'] .navigation-bar {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme='dark'] .breadcrumb-item button {
+  background-color: var(--bg-tertiary);
+  color: #667eea;
+}
+
+[data-theme='dark'] .breadcrumb-item button:hover {
+  background-color: #555;
+}
+
+[data-theme='dark'] .search-input {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .search-input:focus {
+  border-color: #667eea;
+}
+
+[data-theme='dark'] .search-status {
+  background-color: #1a3a3a;
+  color: #b0e0e0;
+  border-color: #3498db;
+}
+
+[data-theme='dark'] .preview-modal {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .preview-header {
+  background-color: var(--bg-tertiary);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='dark'] .preview-header h2 {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .preview-text {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme='dark'] .preview-description {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .file-description {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .edit-input,
+[data-theme='dark'] .edit-textarea {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme='dark'] .edit-input:focus,
+[data-theme='dark'] .edit-textarea:focus {
+  border-color: #667eea;
+}
+
+[data-theme='dark'] .edit-field label {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .folder-list {
+  background-color: var(--bg-secondary);
+}
+
+[data-theme='dark'] .folder-option {
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme='dark'] .folder-select-button {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .folder-select-button:hover {
+  background-color: #667eea;
+  color: white;
 }

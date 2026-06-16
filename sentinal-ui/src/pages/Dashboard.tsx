@@ -44,6 +44,19 @@ export default function Dashboard() {
   const [movingFile, setMovingFile] = useState<FileMetadata | null>(null);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [allFoldersForMove, setAllFoldersForMove] = useState<FolderMetadata[]>([]);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
 
   useEffect(() => {
     if (!apiClient.isAuthenticated()) {
@@ -446,6 +459,13 @@ export default function Dashboard() {
           Sentinal Dashboard
         </h1>
         <div className="header-buttons">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="theme-toggle-button"
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
           <button
             onClick={handleViewRecycleBin}
             className="recycle-bin-button"
