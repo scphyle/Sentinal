@@ -796,6 +796,7 @@ export default function Dashboard() {
                 ) : (
                   <>
                     <div className="preview-header-content">
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#999', marginBottom: '0.5rem' }}>📄 File Preview</p>
                       <h2>{previewFile.fileName}</h2>
                       {previewFile.fileDescription && (
                         <p className="preview-description">{previewFile.fileDescription}</p>
