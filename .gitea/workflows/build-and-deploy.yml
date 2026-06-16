@@ -50,11 +50,20 @@ jobs:
 
       - name: Push to GitHub
         run: |
-          git config --global user.email "ci@tazhome.net"
-          git config --global user.name "Sentinal CI"
-          git remote add github "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git"
-          git push github main
-          git push github --tags
+          git clone "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git" /tmp/sentinal-gh
+          cd /tmp/sentinal-gh
+          git config user.email "ci@tazhome.net"
+          git config user.name "Sentinal CI"
+          git remote set-url origin "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git"
+          git fetch origin main
+          git checkout main
+          # Copy our files from current repo
+          cp -r ../src ../sentinal-ui ../docker-compose.yml ../README.md .
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Sync from Gitea ($(git rev-parse --short HEAD))"
+            git push origin main
+          fi
         continue-on-error: true
 
       - name: Get changes since last tag
