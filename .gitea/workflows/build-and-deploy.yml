@@ -92,76 +92,26 @@ jobs:
       - name: Deploy to Voyager
         if: github.ref == 'refs/heads/main'
         run: |
+          set +x  # Disable command echoing to hide secrets
           echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
+          set -x  # Re-enable command echoing
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H voyager.tazhome.net >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H 10.30.18.10 >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          # Create docker-compose for deployment
-          cat > docker-compose.deploy.yml << COMPOSE
-          version: '3.8'
-          services:
-            sentinal-db:
-              image: postgres:16-alpine
-              container_name: sentinal-db
-              restart: unless-stopped
-              environment:
-                POSTGRES_USER: sentinal
-                POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-                POSTGRES_DB: sentinal
-              volumes:
-                - sentinal-pgdata:/var/lib/postgresql/data
-              healthcheck:
-                test: ["CMD-SHELL", "pg_isready -U sentinal"]
-                interval: 5s
-                timeout: 5s
-                retries: 5
+          # SCP the docker-compose.yml from repo to Voyager Unraid
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.VOYAGER_USER }}@10.30.18.10:/boot/config/plugins/compose.manager/projects/sentinal/
           
-            sentinal-api:
-              image: git.tazhome.net/chas/sentinal:latest
-              container_name: sentinal-api
-              restart: unless-stopped
-              depends_on:
-                sentinal-db:
-                  condition: service_healthy
-              environment:
-                ASPNETCORE_ENVIRONMENT: Production
-                ASPNETCORE_HTTP_PORTS: 8080
-                ConnectionStrings__DefaultConnection: "Host=sentinal-db;Port=5432;Database=sentinal;Username=sentinal;Password=${POSTGRES_PASSWORD}"
-                Jwt__Secret: ${JWT_SECRET}
-                Jwt__Issuer: Sentinal
-                Jwt__Audience: SentinalUsers
-                FileStorage__StorageProvider: Local
-                FileStorage__BasePath: /data/files
-              ports:
-                - "8080:8080"
-              volumes:
-                - sentinal-file-storage:/data/files
-              networks:
-                - sentinal-network
-          
-          networks:
-            sentinal-network:
-              driver: bridge
-          
-          volumes:
-            sentinal-pgdata:
-            sentinal-file-storage:
-          COMPOSE
-          
-          # SCP the compose file to Voyager
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
-          
-          # Create .env file on Voyager
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
+          # Create .env file on Voyager Unraid
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 'cat > /boot/config/plugins/compose.manager/projects/sentinal/.env << EOL
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOL'
           
           # Deploy
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net '
-            cd /home/${{ secrets.VOYAGER_USER }}/sentinal
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 '
+            cd /boot/config/plugins/compose.manager/projects/sentinal
             docker login git.tazhome.net -u chas --password-stdin <<< "${{ secrets.TOKEN_FOR_GITEA }}"
             docker compose pull
             docker compose down || true
@@ -174,13 +124,15 @@ jobs:
       - name: Verify Deployment
         if: github.ref == 'refs/heads/main'
         run: |
+          set +x  # Disable command echoing to hide secrets
           echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
+          set -x  # Re-enable command echoing
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H voyager.tazhome.net >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H 10.30.18.10 >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net '
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 '
             if docker ps | grep sentinal-api > /dev/null; then
               echo "✅ Sentinal API is running on sentinal.tazhome.net"
             else
