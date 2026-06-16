@@ -1,4 +1,4 @@
-name: Build and Deploy Sentinal to Voyager
+name: Build and Test Sentinal
 
 on:
   push:
@@ -50,9 +50,9 @@ jobs:
 
       - name: Push to GitHub
         run: |
-          git config --global credential.helper store
-          echo "https://chas:${{ secrets.TOKEN_FOR_GITHUB }}@github.com" > ~/.git-credentials
-          git remote add github https://github.com/scphyle/Sentinal.git
+          git config --global user.email "ci@tazhome.net"
+          git config --global user.name "Sentinal CI"
+          git remote add github "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git"
           git push github main
           git push github --tags
         continue-on-error: true
@@ -88,57 +88,3 @@ jobs:
               "name": "'"$TAG_NAME"'",
               "body": "Release '"$TAG_NAME"'"
             }'
-
-      - name: Deploy to Voyager
-        if: github.ref == 'refs/heads/main'
-        run: |
-          set +x  # Disable command echoing to hide secrets
-          echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
-          set -x  # Re-enable command echoing
-          chmod 600 /tmp/deploy_key
-          
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 10.30.18.10 >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          # SCP the docker-compose.yml from repo to Voyager Unraid
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.yml ${{ secrets.VOYAGER_USER }}@10.30.18.10:/boot/config/plugins/compose.manager/projects/sentinal/
-          
-          # Create .env file on Voyager Unraid
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 'cat > /boot/config/plugins/compose.manager/projects/sentinal/.env << EOL
-          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          EOL'
-          
-          # Deploy
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 '
-            cd /boot/config/plugins/compose.manager/projects/sentinal
-            docker login git.tazhome.net -u chas --password-stdin <<< "${{ secrets.TOKEN_FOR_GITEA }}"
-            docker compose pull
-            docker compose down || true
-            docker compose up -d
-            docker logout git.tazhome.net
-          '
-          
-          rm /tmp/deploy_key
-
-      - name: Verify Deployment
-        if: github.ref == 'refs/heads/main'
-        run: |
-          set +x  # Disable command echoing to hide secrets
-          echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
-          set -x  # Re-enable command echoing
-          chmod 600 /tmp/deploy_key
-          
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 10.30.18.10 >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@10.30.18.10 '
-            if docker ps | grep sentinal-api > /dev/null; then
-              echo "✅ Sentinal API is running on sentinal.tazhome.net"
-            else
-              echo "❌ Sentinal API failed to start"
-              exit 1
-            fi
-          '
-          
-          rm /tmp/deploy_key
