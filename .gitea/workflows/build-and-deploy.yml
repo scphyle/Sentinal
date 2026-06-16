@@ -41,10 +41,10 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker buildx build \
-            --cache-from type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest \
-            --cache-to type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest,mode=max \
-            --tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest \
-            --tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$(git rev-parse --short HEAD) \
+            --cache-from type=registry,ref=git.tazhome.net/chas/sentinal:latest \
+            --cache-to type=registry,ref=git.tazhome.net/chas/sentinal:latest,mode=max \
+            --tag git.tazhome.net/chas/sentinal:latest \
+            --tag git.tazhome.net/chas/sentinal:$(git rev-parse --short HEAD) \
             --push \
             .
 
@@ -119,7 +119,7 @@ jobs:
                 retries: 5
           
             sentinal-api:
-              image: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+              image: git.tazhome.net/chas/sentinal:latest
               container_name: sentinal-api
               restart: unless-stopped
               depends_on:
