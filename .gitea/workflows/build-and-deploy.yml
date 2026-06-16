@@ -30,7 +30,7 @@ jobs:
           fi
 
       - name: Log in to Gitea Container Registry
-        run: docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_GITEA }}
+        run: docker login git.tazhome.net -u chas --password-stdin <<< '${{ secrets.TOKEN_FOR_GITEA }}'
 
       - name: Set up Docker Buildx
         run: |
@@ -96,10 +96,10 @@ jobs:
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H voyager.local >> ~/.ssh/known_hosts 2>/dev/null || true
           
           # Create docker-compose for deployment
-          cat > docker-compose.deploy.yml << 'COMPOSE'
+          cat > docker-compose.deploy.yml << COMPOSE
           version: '3.8'
           services:
             sentinal-db:
@@ -151,22 +151,22 @@ jobs:
           COMPOSE
           
           # SCP the compose file to Voyager
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }}:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@voyager.local:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
           
           # Create .env file on Voyager
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOL'
           
           # Deploy
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local '
             cd /home/${{ secrets.VOYAGER_USER }}/sentinal
-            docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_GITEA }}
+            docker login git.tazhome.net -u chas --password-stdin <<< "${{ secrets.TOKEN_FOR_GITEA }}"
             docker compose pull
             docker compose down || true
             docker compose up -d
-            docker logout ${{ secrets.DOCKER_REGISTRY }}
+            docker logout git.tazhome.net
           '
           
           rm /tmp/deploy_key
@@ -178,9 +178,9 @@ jobs:
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H voyager.local >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local '
             if docker ps | grep sentinal-api > /dev/null; then
               echo "✅ Sentinal API is running on sentinal.tazhome.net"
             else
