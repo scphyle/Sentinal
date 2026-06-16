@@ -1,4 +1,4 @@
-name: Build and Deploy Sentinal
+name: Build and Deploy Sentinal to Voyager
 
 on:
   push:
@@ -14,10 +14,6 @@ jobs:
       - name: Checkout
         run: git clone --depth 1 --branch ${{ github.ref_name }} https://chas:${{ secrets.TOKEN_FOR_RUNNER }}@git.tazhome.net/chas/${{ secrets.REPOSITORY_GITEA }}.git .
 
-      - name: Install Dependencies
-        run: |
-          apk add --no-cache ca-certificates curl openssh-client docker-cli python3 nodejs npm dotnet-sdk-10.0
-
       - name: Build React App
         run: |
           cd sentinal-ui
@@ -29,23 +25,28 @@ jobs:
         run: |
           dotnet test --verbosity normal
           if [ $? -ne 0 ]; then
-            echo "Tests failed! Aborting pipeline."
+            echo "❌ Tests failed! Aborting pipeline."
             exit 1
           fi
 
       - name: Log in to Gitea Container Registry
-        run: docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_RUNNER }}
+        run: docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_GITEA }}
 
-      - name: Build Docker Image
+      - name: Set up Docker Buildx
         run: |
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          docker build --no-cache -t ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest -t ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$COMMIT_SHA .
+          docker buildx ls | grep -q sentinal || docker buildx create --name sentinal --driver docker-container
+          docker buildx use sentinal
+          docker buildx inspect --bootstrap
 
-      - name: Push Docker Image to Registry
+      - name: Build and Push Docker Image
         run: |
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          docker push ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
-          docker push ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$COMMIT_SHA
+          docker buildx build \
+            --cache-from type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest \
+            --cache-to type=registry,ref=${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest,mode=max \
+            --tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest \
+            --tag ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.IMAGE_NAME }}:$(git rev-parse --short HEAD) \
+            --push \
+            .
 
       - name: Push to GitHub
         run: |
@@ -56,11 +57,46 @@ jobs:
           git push github --tags
         continue-on-error: true
 
-      - name: Deploy to Voyager (Docker Compose)
+      - name: Get changes since last tag
+        id: changes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --oneline)
+            FILES=$(git diff --stat HEAD)
+          else
+            COMMITS=$(git log --oneline ${LAST_TAG}..HEAD)
+            FILES=$(git diff --stat ${LAST_TAG}..HEAD)
+          fi
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Gitea Release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          curl -X POST "https://git.tazhome.net/api/v1/repos/chas/${{ secrets.REPOSITORY_GITEA }}/releases" \
+            -H "Authorization: token ${{ secrets.TOKEN_FOR_RUNNER }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "tag_name": "'"$TAG_NAME"'",
+              "name": "'"$TAG_NAME"'",
+              "body": "Release '"$TAG_NAME"'"
+            }'
+
+      - name: Deploy to Voyager
         if: github.ref == 'refs/heads/main'
         run: |
           echo "${{ secrets.VOYAGER_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
+          
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           
           # Create docker-compose for deployment
           cat > docker-compose.deploy.yml << 'COMPOSE'
@@ -105,21 +141,6 @@ jobs:
               networks:
                 - sentinal-network
           
-            sentinal-proxy:
-              image: nginx:alpine
-              container_name: sentinal-proxy
-              restart: unless-stopped
-              ports:
-                - "80:80"
-                - "443:443"
-              volumes:
-                - ./nginx.conf:/etc/nginx/nginx.conf:ro
-                - ./ssl:/etc/nginx/ssl:ro
-              depends_on:
-                - sentinal-api
-              networks:
-                - sentinal-network
-          
           networks:
             sentinal-network:
               driver: bridge
@@ -130,8 +151,6 @@ jobs:
           COMPOSE
           
           # SCP the compose file to Voyager
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VOYAGER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }}:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
           
           # Create .env file on Voyager
@@ -143,7 +162,7 @@ jobs:
           # Deploy
           ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
             cd /home/${{ secrets.VOYAGER_USER }}/sentinal
-            docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_RUNNER }}
+            docker login ${{ secrets.DOCKER_REGISTRY }} -u chas --password ${{ secrets.TOKEN_FOR_GITEA }}
             docker compose pull
             docker compose down || true
             docker compose up -d
@@ -163,7 +182,7 @@ jobs:
           
           ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@${{ secrets.VOYAGER_HOST }} '
             if docker ps | grep sentinal-api > /dev/null; then
-              echo "✅ Sentinal API is running!"
+              echo "✅ Sentinal API is running on sentinal.tazhome.net"
             else
               echo "❌ Sentinal API failed to start"
               exit 1
