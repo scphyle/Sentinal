@@ -41,8 +41,6 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker buildx build \
-            --cache-from type=registry,ref=git.tazhome.net/chas/sentinal:latest \
-            --cache-to type=registry,ref=git.tazhome.net/chas/sentinal:latest,mode=max \
             --tag git.tazhome.net/chas/sentinal:latest \
             --tag git.tazhome.net/chas/sentinal:$(git rev-parse --short HEAD) \
             --push \
