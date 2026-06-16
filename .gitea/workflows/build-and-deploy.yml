@@ -18,7 +18,7 @@ jobs:
         run: |
           cd sentinal-ui
           npm install
-          VITE_API_URL=https://sentinal.tazhome.net/api npm run build
+          npm run build
           cp -r dist/* ../src/Sentinal.Api/wwwroot/
 
       - name: Run Tests
@@ -50,11 +50,12 @@ jobs:
 
       - name: Push to GitHub
         run: |
-          git clone "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git" /tmp/sentinal-gh
+          rm -rf /tmp/sentinal-gh
+          git clone https://github.com/scphyle/Sentinal.git /tmp/sentinal-gh
           cd /tmp/sentinal-gh
           git config user.email "ci@tazhome.net"
           git config user.name "Sentinal CI"
-          git remote set-url origin "https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git"
+          git remote set-url origin https://x-access-token:${{ secrets.TOKEN_FOR_GITHUB }}@github.com/scphyle/Sentinal.git
           git fetch origin main
           git checkout main
           # Copy our files from current repo
