@@ -1,6 +1,6 @@
 # Sentinal - Secure File Sharing API
 
-Sentinal is a secure, type-safe file sharing API built with modern C# and .NET architecture patterns. It provides a robust foundation for file management operations with JWT authentication, soft-delete support, folder hierarchies, and a pluggable storage backend ready to be extended for cloud deployment.
+Sentinal is a secure, type-safe file sharing API built with modern C# and .NET architecture patterns. It provides a robust foundation for file management operations with JWT authentication, soft-delete support, folder hierarchies, and a pluggable storage backend ready for cloud deployment.
 
 ## What Has Been Built
 
@@ -98,11 +98,19 @@ API & UI: `http://localhost:5230`
 
 ### Or Run Locally (Manual)
 
+**Prerequisites for local development:**
+- PostgreSQL 12+ running and accessible
+- Create a database for Sentinal (e.g., `sentinal_db`)
+
 **Backend + Integrated UI:**
 ```bash
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your JWT_SECRET, database credentials, etc.
+# Edit .env with:
+#   - ConnectionStrings__DefaultConnection: PostgreSQL connection string
+#     Example: "Host=localhost;Port=5432;Database=sentinal_db;Username=postgres;Password=yourpassword"
+#   - JWT_SECRET: A strong random string (32+ characters)
+#   - POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
 
 # Build React UI and copy to wwwroot
 cd sentinal-ui
@@ -116,6 +124,22 @@ dotnet run --launch-profile http
 ```
 
 The API and UI will be available at `http://localhost:5230`
+
+**Or use Docker to spin up PostgreSQL:**
+```bash
+docker run -d \
+  --name sentinal-postgres \
+  -e POSTGRES_DB=sentinal_db \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+Then set your connection string in `.env`:
+```
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=sentinal_db;Username=postgres;Password=postgres
+```
 
 **Frontend Development (Optional - for active UI work):**
 
