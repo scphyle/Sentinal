@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        run: git clone --depth 1 --branch ${{ github.ref_name }} https://chas:${{ secrets.TOKEN_FOR_RUNNER }}@git.tazhome.net/chas/${{ secrets.REPOSITORY_GITEA }}.git .
+        run: git clone --depth 1 --branch ${{ github.ref_name }} https://chas:${{ secrets.TOKEN_FOR_RUNNER }}@git.tazhome.net/chas/Sentinal.git .
 
       - name: Build React App
         run: |
@@ -52,7 +52,7 @@ jobs:
         run: |
           git config --global credential.helper store
           echo "https://chas:${{ secrets.TOKEN_FOR_GITHUB }}@github.com" > ~/.git-credentials
-          git remote add github https://github.com/${{ secrets.REPOSITORY_GITHUB }}.git
+          git remote add github https://github.com/scphyle/Sentinal.git
           git push github main
           git push github --tags
         continue-on-error: true
@@ -80,7 +80,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          curl -X POST "https://git.tazhome.net/api/v1/repos/chas/${{ secrets.REPOSITORY_GITEA }}/releases" \
+          curl -X POST "https://git.tazhome.net/api/v1/repos/chas/Sentinal/releases" \
             -H "Authorization: token ${{ secrets.TOKEN_FOR_RUNNER }}" \
             -H "Content-Type: application/json" \
             -d '{
@@ -96,7 +96,7 @@ jobs:
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H voyager.local >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H voyager.tazhome.net >> ~/.ssh/known_hosts 2>/dev/null || true
           
           # Create docker-compose for deployment
           cat > docker-compose.deploy.yml << COMPOSE
@@ -151,16 +151,16 @@ jobs:
           COMPOSE
           
           # SCP the compose file to Voyager
-          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@voyager.local:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
+          scp -i /tmp/deploy_key -o StrictHostKeyChecking=no docker-compose.deploy.yml ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net:/home/${{ secrets.VOYAGER_USER }}/sentinal/docker-compose.yml
           
           # Create .env file on Voyager
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net 'cat > /home/${{ secrets.VOYAGER_USER }}/sentinal/.env << EOL
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOL'
           
           # Deploy
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local '
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net '
             cd /home/${{ secrets.VOYAGER_USER }}/sentinal
             docker login git.tazhome.net -u chas --password-stdin <<< "${{ secrets.TOKEN_FOR_GITEA }}"
             docker compose pull
@@ -178,9 +178,9 @@ jobs:
           chmod 600 /tmp/deploy_key
           
           mkdir -p ~/.ssh
-          ssh-keyscan -H voyager.local >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H voyager.tazhome.net >> ~/.ssh/known_hosts 2>/dev/null || true
           
-          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.local '
+          ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no ${{ secrets.VOYAGER_USER }}@voyager.tazhome.net '
             if docker ps | grep sentinal-api > /dev/null; then
               echo "✅ Sentinal API is running on sentinal.tazhome.net"
             else
